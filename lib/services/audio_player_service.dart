@@ -352,6 +352,11 @@ class AudioPlayerService {
   // Queue persistence debounce
   Timer? _persistenceDebounceTimer;
   static const _persistenceDebounceDelay = Duration(seconds: 2);
+  // Position persistence (periodic while playing)
+  DateTime? _lastPositionPersistAt;
+  Duration _lastPositionPersisted = Duration.zero;
+  static const _positionPersistInterval = Duration(seconds: 5);
+  static const _positionPersistForceDelta = Duration(seconds: 15);
 
   /// Stream of playback state changes (for major UI updates)
   Stream<PlaybackState> get stateStream => _stateController.stream;
@@ -398,8 +403,17 @@ class AudioPlayerService {
 
     // Listen to position changes - THROTTLED to avoid UI jank
     _player.positionStream.listen((position) {
+      // Avoid overwriting restored position while idle (keeps mini player correct)
+      if (_player.processingState == ProcessingState.idle &&
+          position == Duration.zero &&
+          _pendingSeekPosition != null &&
+          _pendingSeekTrackId == _currentTrack?.id) {
+        return;
+      }
+
       // Always update the dedicated position stream (for progress bars)
       _positionController.add(position);
+      _maybePersistPosition(position);
 
       // Throttle full state updates to reduce rebuilds
       final now = DateTime.now();
@@ -1371,6 +1385,7 @@ class AudioPlayerService {
   /// Pause
   Future<void> pause() async {
     await _player.pause();
+    _persistQueueNow(position: _player.position);
   }
 
   /// Toggle play/pause
@@ -1384,6 +1399,8 @@ class AudioPlayerService {
 
   /// Stop playback
   Future<void> stop() async {
+    final position = _player.position;
+    _persistQueueNow(position: position);
     await _player.stop();
   }
 
@@ -1582,6 +1599,7 @@ class AudioPlayerService {
         final restoredDuration = _currentTrack?.duration;
         final hasRestoredDuration =
             restoredDuration != null && restoredDuration > Duration.zero;
+        _lastPositionPersisted = persistedState.position;
         if (persistedState.position > Duration.zero &&
             _currentTrack != null) {
           _pendingSeekPosition = persistedState.position;
@@ -1610,28 +1628,63 @@ class AudioPlayerService {
     }
   }
 
+  Duration _resolvePersistPosition(Duration? position) {
+    if (position != null) return position;
+    if (_pendingSeekPosition != null &&
+        _pendingSeekTrackId == _currentTrack?.id) {
+      return _pendingSeekPosition!;
+    }
+    return _player.position;
+  }
+
+  void _persistQueueNow({Duration? position, bool log = false}) {
+    if (_queue.isEmpty || _currentIndex < 0) return;
+    final resolvedPosition = _resolvePersistPosition(position);
+    _lastPositionPersisted = resolvedPosition;
+    _lastPositionPersistAt = DateTime.now();
+    unawaited(
+      QueuePersistenceService.saveQueue(
+        queue: _queue,
+        currentIndex: _currentIndex,
+        position: resolvedPosition,
+      ),
+    );
+    if (log && kDebugMode) {
+      print(
+        'AudioPlayerService: Queue persisted (${_queue.length} tracks, index $_currentIndex)',
+      );
+    }
+  }
+
+  void _maybePersistPosition(Duration position) {
+    if (!_player.playing) return;
+    if (_queue.isEmpty || _currentIndex < 0) return;
+
+    final now = DateTime.now();
+    final lastAt = _lastPositionPersistAt;
+    final delta = (position - _lastPositionPersisted).abs();
+
+    final shouldPersist =
+        lastAt == null ||
+        now.difference(lastAt) >= _positionPersistInterval ||
+        delta >= _positionPersistForceDelta;
+    if (!shouldPersist) return;
+
+    _persistQueueNow(position: position);
+  }
+
   /// Save queue state with debouncing to prevent excessive writes
   void _saveQueueDebounced() {
     _persistenceDebounceTimer?.cancel();
     _persistenceDebounceTimer = Timer(_persistenceDebounceDelay, () {
-      if (_queue.isNotEmpty && _currentIndex >= 0) {
-        QueuePersistenceService.saveQueue(
-          queue: _queue,
-          currentIndex: _currentIndex,
-          position: _player.position,
-        );
-        if (kDebugMode) {
-          print(
-            'AudioPlayerService: Queue persisted (${_queue.length} tracks, index $_currentIndex)',
-          );
-        }
-      }
+      _persistQueueNow(log: true);
     });
   }
 
   /// Dispose resources
   void dispose() {
     _persistenceDebounceTimer?.cancel();
+    _persistQueueNow(position: _player.position);
     _player.dispose();
     _stateController.close();
     _positionController.close();
