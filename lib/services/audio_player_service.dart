@@ -352,6 +352,8 @@ class AudioPlayerService {
   // Queue persistence debounce
   Timer? _persistenceDebounceTimer;
   static const _persistenceDebounceDelay = Duration(seconds: 2);
+  // If the app was closed for more than this window, clear persisted queue.
+  static const _closedRestoreTtl = Duration(minutes: 5);
   // Position persistence (periodic while playing)
   DateTime? _lastPositionPersistAt;
   Duration _lastPositionPersisted = Duration.zero;
@@ -1591,6 +1593,16 @@ class AudioPlayerService {
             'AudioPlayerService: Restoring ${persistedState.queue.length} tracks from persisted queue',
           );
         }
+        final savedAt = persistedState.savedAt;
+        final isExpired =
+            savedAt != null &&
+            DateTime.now().difference(savedAt) > _closedRestoreTtl;
+        if (isExpired) {
+          // App was closed for too long: clear persisted queue so no stale track shows.
+          await QueuePersistenceService.clearQueue();
+          return;
+        }
+        final restoredPosition = persistedState.position;
         _queue = persistedState.queue;
         _originalQueue = List.from(_queue);
         _currentIndex = persistedState.currentIndex;
@@ -1599,12 +1611,12 @@ class AudioPlayerService {
         final restoredDuration = _currentTrack?.duration;
         final hasRestoredDuration =
             restoredDuration != null && restoredDuration > Duration.zero;
-        _lastPositionPersisted = persistedState.position;
-        if (persistedState.position > Duration.zero &&
+        _lastPositionPersisted = restoredPosition;
+        if (restoredPosition > Duration.zero &&
             _currentTrack != null) {
-          _pendingSeekPosition = persistedState.position;
+          _pendingSeekPosition = restoredPosition;
           _pendingSeekTrackId = _currentTrack!.id;
-          _positionController.add(persistedState.position);
+          _positionController.add(restoredPosition);
         }
 
         // Update state to show restored queue (but don't auto-play)
@@ -1613,7 +1625,7 @@ class AudioPlayerService {
           queueRevision: _queueRevision,
           currentIndex: _currentIndex,
           currentTrack: _currentTrack,
-          position: persistedState.position,
+          position: restoredPosition,
           duration: hasRestoredDuration ? restoredDuration : null,
         );
 
@@ -1637,7 +1649,10 @@ class AudioPlayerService {
     return _player.position;
   }
 
-  void _persistQueueNow({Duration? position, bool log = false}) {
+  void _persistQueueNow({
+    Duration? position,
+    bool log = false,
+  }) {
     if (_queue.isEmpty || _currentIndex < 0) return;
     final resolvedPosition = _resolvePersistPosition(position);
     _lastPositionPersisted = resolvedPosition;

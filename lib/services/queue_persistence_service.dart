@@ -9,6 +9,7 @@ class QueuePersistenceService {
   static const _queueKey = 'persisted_queue';
   static const _currentIndexKey = 'persisted_queue_index';
   static const _positionKey = 'persisted_position_ms';
+  static const _savedAtKey = 'persisted_saved_at_ms';
 
   /// Save current queue state
   static Future<void> saveQueue({
@@ -28,6 +29,8 @@ class QueuePersistenceService {
 
       // Save position
       await prefs.setInt(_positionKey, position.inMilliseconds);
+      // Save timestamp
+      await prefs.setInt(_savedAtKey, DateTime.now().millisecondsSinceEpoch);
     } catch (e) {
       if (kDebugMode) {print('Error saving queue: $e');}
     }
@@ -47,11 +50,16 @@ class QueuePersistenceService {
 
       final currentIndex = prefs.getInt(_currentIndexKey) ?? 0;
       final positionMs = prefs.getInt(_positionKey) ?? 0;
+      final savedAtMs = prefs.getInt(_savedAtKey) ?? 0;
+      final savedAt = savedAtMs > 0
+          ? DateTime.fromMillisecondsSinceEpoch(savedAtMs)
+          : null;
 
       return PersistedQueueState(
         queue: queue,
         currentIndex: currentIndex.clamp(0, queue.length - 1),
         position: Duration(milliseconds: positionMs),
+        savedAt: savedAt,
       );
     } catch (e) {
       if (kDebugMode) {print('Error loading queue: $e');}
@@ -66,6 +74,7 @@ class QueuePersistenceService {
       await prefs.remove(_queueKey);
       await prefs.remove(_currentIndexKey);
       await prefs.remove(_positionKey);
+      await prefs.remove(_savedAtKey);
     } catch (e) {
       if (kDebugMode) {print('Error clearing queue: $e');}
     }
@@ -84,11 +93,13 @@ class PersistedQueueState {
   final List<Track> queue;
   final int currentIndex;
   final Duration position;
+  final DateTime? savedAt;
 
   const PersistedQueueState({
     required this.queue,
     required this.currentIndex,
     required this.position,
+    required this.savedAt,
   });
 
   Track? get currentTrack => currentIndex >= 0 && currentIndex < queue.length
