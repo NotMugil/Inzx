@@ -130,6 +130,9 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                     ),
                     onPressed: () {
                       ref
+                          .read(localTracksProvider.notifier)
+                          .removeTracksInFolder(folder);
+                      ref
                           .read(localMusicFoldersProvider.notifier)
                           .removeFolder(folder);
                       Navigator.pop(context);

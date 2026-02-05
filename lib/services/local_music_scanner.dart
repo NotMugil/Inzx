@@ -5,6 +5,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:hive/hive.dart';
 import '../models/models.dart';
+import '../core/services/cache/hive_service.dart';
+import '../data/entities/track_entity.dart';
 import '../data/entities/download_entity.dart';
 
 /// Provider for scanned local music folders
@@ -41,35 +43,130 @@ class ScanProgress {
 
 /// Local music folders notifier
 class LocalMusicFoldersNotifier extends StateNotifier<List<String>> {
-  LocalMusicFoldersNotifier() : super([]);
+  LocalMusicFoldersNotifier() : super([]) {
+    _loadPersisted();
+  }
+
+  Future<void> _loadPersisted() async {
+    try {
+      final box = HiveService.localMusicFoldersBox;
+      state = box.values.toList();
+    } catch (e) {
+      if (kDebugMode) {
+        print('LocalMusicFoldersNotifier: Load error: $e');
+      }
+    }
+  }
+
+  Future<void> _persist() async {
+    try {
+      final box = HiveService.localMusicFoldersBox;
+      await box.clear();
+      if (state.isNotEmpty) {
+        final entries = {for (final p in state) p: p};
+        await box.putAll(entries);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('LocalMusicFoldersNotifier: Persist error: $e');
+      }
+    }
+  }
 
   void addFolder(String path) {
     if (!state.contains(path)) {
       state = [...state, path];
+      _persist();
     }
   }
 
   void removeFolder(String path) {
     state = state.where((p) => p != path).toList();
+    _persist();
   }
 
   void clear() {
     state = [];
+    _persist();
   }
 }
 
 /// Local tracks notifier
 class LocalTracksNotifier extends StateNotifier<List<Track>> {
-  LocalTracksNotifier() : super([]);
+  LocalTracksNotifier() : super([]) {
+    _loadPersisted();
+  }
+
+  Future<void> _loadPersisted() async {
+    try {
+      final box = HiveService.localMusicTracksBox;
+      final tracks = box.values.map(_trackFromEntity).toList();
+      state = tracks;
+    } catch (e) {
+      if (kDebugMode) {
+        print('LocalTracksNotifier: Load error: $e');
+      }
+    }
+  }
 
   void addTracks(List<Track> tracks) {
     final existingIds = state.map((t) => t.id).toSet();
     final newTracks = tracks.where((t) => !existingIds.contains(t.id)).toList();
     state = [...state, ...newTracks];
+    if (newTracks.isNotEmpty) {
+      _persistNewTracks(newTracks);
+    }
   }
 
   void clear() {
     state = [];
+    HiveService.localMusicTracksBox.clear();
+  }
+
+  void removeTracksInFolder(String folderPath) {
+    final normalizedFolder = _normalizePath(folderPath);
+    final folderWithSep = normalizedFolder.endsWith(Platform.pathSeparator)
+        ? normalizedFolder
+        : '$normalizedFolder${Platform.pathSeparator}';
+
+    final removedIds = <String>[];
+    final remaining = <Track>[];
+
+    for (final track in state) {
+      final filePath = track.localFilePath;
+      if (filePath == null || filePath.isEmpty) {
+        remaining.add(track);
+        continue;
+      }
+
+      final normalizedFile = _normalizePath(filePath);
+      final isInFolder =
+          normalizedFile == normalizedFolder ||
+          normalizedFile.startsWith(folderWithSep);
+
+      if (isInFolder) {
+        removedIds.add(track.id);
+      } else {
+        remaining.add(track);
+      }
+    }
+
+    if (removedIds.isEmpty) return;
+
+    state = remaining;
+    HiveService.localMusicTracksBox.deleteAll(removedIds);
+  }
+
+  Future<void> _persistNewTracks(List<Track> tracks) async {
+    try {
+      final box = HiveService.localMusicTracksBox;
+      final entities = {for (final t in tracks) t.id: _trackToEntity(t)};
+      await box.putAll(entities);
+    } catch (e) {
+      if (kDebugMode) {
+        print('LocalTracksNotifier: Persist error: $e');
+      }
+    }
   }
 }
 
@@ -267,6 +364,40 @@ class LocalMusicScanner {
 
     return allTracks;
   }
+}
+
+TrackEntity _trackToEntity(Track track) {
+  return TrackEntity(
+    id: track.id,
+    title: track.title,
+    artist: track.artist,
+    album: track.album,
+    duration: track.duration.inMilliseconds,
+    thumbnailUrl: track.thumbnailUrl,
+    isExplicit: track.isExplicit,
+    isLiked: track.isLiked,
+    addedAt: track.addedAt,
+    localFilePath: track.localFilePath,
+  );
+}
+
+Track _trackFromEntity(TrackEntity entity) {
+  return Track(
+    id: entity.id,
+    title: entity.title,
+    artist: entity.artist,
+    album: entity.album,
+    duration: Duration(milliseconds: entity.duration),
+    thumbnailUrl: entity.thumbnailUrl,
+    isExplicit: entity.isExplicit,
+    isLiked: entity.isLiked,
+    addedAt: entity.addedAt,
+    localFilePath: entity.localFilePath,
+  );
+}
+
+String _normalizePath(String path) {
+  return path.replaceAll('\\', Platform.pathSeparator);
 }
 
 /// Request data for isolate file discovery

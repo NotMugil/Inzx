@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:inzx/core/services/result.dart';
 import 'package:inzx/core/services/cache/cache_config.dart';
@@ -19,6 +20,7 @@ class CacheAnalytics extends ChangeNotifier {
   int _cacheHits = 0;
   int _cacheMisses = 0;
   int _networkCalls = 0;
+  bool _notifyScheduled = false;
 
   int get cacheHits => _cacheHits;
   int get cacheMisses => _cacheMisses;
@@ -28,26 +30,35 @@ class CacheAnalytics extends ChangeNotifier {
       ? 0.0
       : (_cacheHits / (_cacheHits + _cacheMisses)) * 100;
 
+  void _scheduleNotify() {
+    if (_notifyScheduled) return;
+    _notifyScheduled = true;
+    scheduleMicrotask(() {
+      _notifyScheduled = false;
+      notifyListeners();
+    });
+  }
+
   void recordCacheHit() {
     _cacheHits++;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void recordCacheMiss() {
     _cacheMisses++;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void recordNetworkCall() {
     _networkCalls++;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   void reset() {
     _cacheHits = 0;
     _cacheMisses = 0;
     _networkCalls = 0;
-    notifyListeners();
+    _scheduleNotify();
   }
 
   @override

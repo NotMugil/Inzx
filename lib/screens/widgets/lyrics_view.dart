@@ -18,6 +18,7 @@ class LyricsView extends ConsumerStatefulWidget {
 class _LyricsViewState extends ConsumerState<LyricsView> {
   final ScrollController _scrollController = ScrollController();
   int _currentLineIndex = -1;
+  List<GlobalKey> _lineKeys = [];
 
   @override
   void dispose() {
@@ -128,6 +129,10 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     Color textColor,
     Color secondaryColor,
   ) {
+    if (_lineKeys.length != lines.length) {
+      _lineKeys = List.generate(lines.length, (_) => GlobalKey());
+    }
+
     // Find current line based on position
     final positionMs = widget.currentPosition.inMilliseconds;
     int currentIdx = -1;
@@ -144,16 +149,27 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     if (currentIdx != _currentLineIndex && currentIdx >= 0) {
       _currentLineIndex = currentIdx;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          // Calculate offset to center the current line
-          final lineHeight = 70.0; // Matches new taller rows
-          final screenCenter = 200.0; // Approximate center offset
-          final targetOffset = (currentIdx * lineHeight) - screenCenter;
-          _scrollController.animateTo(
-            targetOffset.clamp(0, _scrollController.position.maxScrollExtent),
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeOutCubic,
-          );
+        if (_scrollController.hasClients &&
+            currentIdx < _lineKeys.length) {
+          final keyContext = _lineKeys[currentIdx].currentContext;
+          if (keyContext != null) {
+            Scrollable.ensureVisible(
+              keyContext,
+              alignment: 0.35,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutCubic,
+            );
+          } else {
+            final targetOffset = (currentIdx * 72.0).clamp(
+              0.0,
+              _scrollController.position.maxScrollExtent,
+            );
+            _scrollController.animateTo(
+              targetOffset,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutCubic,
+            );
+          }
         }
       });
     }
@@ -188,11 +204,11 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
           return GestureDetector(
             onTap: () => _seekToLyric(line.timeInMs),
             child: AnimatedContainer(
+              key: _lineKeys[index],
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeOut,
-              height: 70, // Taller for bigger text
               alignment: Alignment.centerLeft, // LEFT aligned
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 250),
                 curve: Curves.easeOut,
@@ -204,8 +220,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
                 ),
                 child: Text(
                   line.text.isEmpty ? '♪' : line.text,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  softWrap: true,
                 ),
               ),
             ),
@@ -216,15 +231,55 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   }
 
   Widget _buildPlainLyrics(String lyrics, bool isDark, Color textColor) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Text(
-        lyrics,
-        style: TextStyle(
-          fontSize: 16,
-          color: textColor.withValues(alpha: 0.9),
-          height: 1.6,
-        ),
+    final lines =
+        lyrics.split('\n').map((l) => l.trimRight()).toList(growable: false);
+
+    return ShaderMask(
+      shaderCallback: (bounds) => LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.transparent,
+          Colors.white,
+          Colors.white,
+          Colors.transparent,
+        ],
+        stops: const [0.0, 0.1, 0.9, 1.0],
+      ).createShader(bounds),
+      blendMode: BlendMode.dstIn,
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 80),
+        itemCount: lines.length,
+        itemBuilder: (context, index) {
+          final line = lines[index];
+
+          if (line.isEmpty) {
+            return const SizedBox(height: 18);
+          }
+
+          final isSection = line.startsWith('[') && line.endsWith(']');
+          final displayLine = isSection
+              ? line.replaceAll(RegExp(r'^[\[\(]+|[\]\)]+$'), '')
+              : line;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                displayLine,
+                style: TextStyle(
+                  fontSize: isSection ? 18 : 22,
+                  fontWeight: isSection ? FontWeight.w700 : FontWeight.w400,
+                  letterSpacing: isSection ? 0.5 : 0.0,
+                  color: textColor.withValues(alpha: isSection ? 0.75 : 0.95),
+                  height: 1.35,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

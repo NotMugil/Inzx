@@ -7,12 +7,13 @@ import 'package:inzx/data/repositories/music_repository.dart'
     show CacheAnalytics;
 import 'lyrics_models.dart';
 import 'lrclib_provider.dart';
+import 'genius_provider.dart';
 
 /// Provider names enum for type safety
-enum ProviderName { lrclib }
+enum ProviderName { lrclib, genius }
 
 /// All available provider names in order
-const providerNames = [ProviderName.lrclib];
+const providerNames = [ProviderName.lrclib, ProviderName.genius];
 
 /// Extension to get display name
 extension ProviderNameExt on ProviderName {
@@ -20,6 +21,8 @@ extension ProviderNameExt on ProviderName {
     switch (this) {
       case ProviderName.lrclib:
         return 'LRCLib';
+      case ProviderName.genius:
+        return 'Genius';
     }
   }
 }
@@ -65,7 +68,10 @@ class LyricsNotifier extends StateNotifier<LyricsState> {
   final Map<ProviderName, LyricsProvider> _providers;
 
   LyricsNotifier()
-    : _providers = {ProviderName.lrclib: LRCLibProvider()},
+    : _providers = {
+        ProviderName.lrclib: LRCLibProvider(),
+        ProviderName.genius: GeniusProvider(),
+      },
       super(const LyricsState());
 
   /// Fetch lyrics for a track from all providers (with caching)
@@ -77,15 +83,19 @@ class LyricsNotifier extends StateNotifier<LyricsState> {
       if (kDebugMode) {
         print('LyricsService: Using cached lyrics for ${info.videoId}');
       }
+      final cachedProvider =
+          _providerNameFromSource(cached.source) ?? ProviderName.lrclib;
+      final providers = {
+        for (final p in providerNames) p: const ProviderStatus(),
+      };
+      providers[cachedProvider] = ProviderStatus(
+        state: LyricsProviderState.done,
+        data: cached,
+      );
       state = LyricsState(
         videoId: info.videoId,
-        providers: {
-          ProviderName.lrclib: ProviderStatus(
-            state: LyricsProviderState.done,
-            data: cached,
-          ),
-        },
-        currentProvider: ProviderName.lrclib,
+        providers: providers,
+        currentProvider: cachedProvider,
         hasManuallySwitched: false,
       );
       return;
@@ -139,6 +149,14 @@ class LyricsNotifier extends StateNotifier<LyricsState> {
         print('LyricsService: Cache read error: $e');
       }
     }
+    return null;
+  }
+
+  ProviderName? _providerNameFromSource(String? source) {
+    if (source == null) return null;
+    final normalized = source.trim().toLowerCase();
+    if (normalized == 'lrclib') return ProviderName.lrclib;
+    if (normalized == 'genius') return ProviderName.genius;
     return null;
   }
 
@@ -259,6 +277,11 @@ class LyricsNotifier extends StateNotifier<LyricsState> {
 
     // Has plain lyrics
     if (status.data?.hasPlainLyrics ?? false) bias += 1;
+
+    // Prefer LRCLib overall if it has any lyrics
+    if (name == ProviderName.lrclib && (status.data?.hasLyrics ?? false)) {
+      bias += 1;
+    }
 
     // Prefer LRCLib for synced lyrics
     if (name == ProviderName.lrclib &&

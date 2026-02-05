@@ -25,6 +25,8 @@ class HiveService {
   static const String _playlistsBoxName = 'playlists_cache';
   static const String _colorsBoxName = 'colors_cache';
   static const String _streamCacheBoxName = 'stream_url_cache';
+  static const String _localMusicFoldersBoxName = 'local_music_folders';
+  static const String _localMusicTracksBoxName = 'local_music_tracks';
 
   static late Box<TrackEntity> _tracksBox;
   static late Box<dynamic> _searchCacheBox;
@@ -38,6 +40,8 @@ class HiveService {
   static late Box<PlaylistCacheEntity> _playlistsBox;
   static late Box<ColorCacheEntity> _colorsBox;
   static late Box<StreamCacheEntity> _streamCacheBox;
+  static late Box<String> _localMusicFoldersBox;
+  static late Box<TrackEntity> _localMusicTracksBox;
 
   /// Initialize Hive and all boxes
   static Future<void> init() async {
@@ -93,6 +97,12 @@ class HiveService {
     _colorsBox = await Hive.openBox<ColorCacheEntity>(_colorsBoxName);
     _streamCacheBox = await Hive.openBox<StreamCacheEntity>(
       _streamCacheBoxName,
+    );
+    _localMusicFoldersBox = await Hive.openBox<String>(
+      _localMusicFoldersBoxName,
+    );
+    _localMusicTracksBox = await Hive.openBox<TrackEntity>(
+      _localMusicTracksBoxName,
     );
 
     // Clean up expired cache entries and enforce limits on init
@@ -267,6 +277,8 @@ class HiveService {
   static Box<PlaylistCacheEntity> get playlistsBox => _playlistsBox;
   static Box<ColorCacheEntity> get colorsBox => _colorsBox;
   static Box<StreamCacheEntity> get streamCacheBox => _streamCacheBox;
+  static Box<String> get localMusicFoldersBox => _localMusicFoldersBox;
+  static Box<TrackEntity> get localMusicTracksBox => _localMusicTracksBox;
 
   // ============ Cleanup ============
   static Future<void> closeAllBoxes() async {
@@ -286,6 +298,8 @@ class HiveService {
     await _playlistsBox.clear();
     await _colorsBox.clear();
     await _streamCacheBox.clear();
+    await _localMusicFoldersBox.clear();
+    await _localMusicTracksBox.clear();
   }
 
   /// Compact all boxes to reclaim disk space from deleted entries
@@ -303,5 +317,7 @@ class HiveService {
     await _playlistsBox.compact();
     await _colorsBox.compact();
     await _streamCacheBox.compact();
+    await _localMusicFoldersBox.compact();
+    await _localMusicTracksBox.compact();
   }
 }

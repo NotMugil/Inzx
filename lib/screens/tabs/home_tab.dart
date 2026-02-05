@@ -294,7 +294,9 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
       child: NotificationListener<ScrollNotification>(
         onNotification: (notification) {
           // Load more when near bottom - handles both drag and momentum scrolling
-          if (notification is ScrollUpdateNotification) {
+          if (notification is ScrollUpdateNotification &&
+              notification.metrics.axis == Axis.vertical &&
+              notification.depth == 0) {
             final metrics = notification.metrics;
             // Check if near bottom (within 500px) and have more content
             if (metrics.pixels >= metrics.maxScrollExtent - 500 &&

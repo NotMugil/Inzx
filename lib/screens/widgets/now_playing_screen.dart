@@ -138,6 +138,7 @@ class NowPlayingScreen extends ConsumerStatefulWidget {
 
 class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     with TickerProviderStateMixin {
+  static const double _syncedLyricPreviewHeight = 72;
   late AnimationController _colorAnimController;
   late TabController _tabController;
   late PageController _pageController;
@@ -311,6 +312,8 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
               },
               // Now Playing content (shown when collapsed)
               nowPlayingContent: SafeArea(
+                top: true,
+                bottom: false,
                 child: _buildFullAlbumView(
                   track,
                   state,
@@ -361,39 +364,46 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
         _buildTopBar(textColor, secondaryTextColor),
 
         // Album art (tap to show lyrics)
+        _buildAlbumArt(
+          track,
+          accentColor,
+          onTap: () {
+            setState(() {
+              _showLyrics = true;
+              _tabController.animateTo(1); // Switch to LYRICS tab
+            });
+          },
+        ),
+
         Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _showLyrics = true;
-                _tabController.animateTo(1); // Switch to LYRICS tab
-              });
-            },
-            child: _buildAlbumArt(track, accentColor),
+          child: Column(
+            children: [
+              // Current synced lyric line (shown only when synced lyrics are available)
+              _buildSyncedLyricPreview(textColor),
+
+              // Track info
+              _buildTrackInfo(track, textColor, secondaryTextColor, accentColor),
+
+              // Progress bar
+              _NowPlayingProgressBar(
+                duration: state.duration,
+                textColor: textColor,
+                secondaryColor: secondaryTextColor,
+                accentColor: accentColor,
+              ),
+
+              // Controls
+              _buildControls(state, playerService, textColor, accentColor),
+
+              const Spacer(),
+
+              // Bottom tabs
+              _buildBottomTabs(textColor, accentColor),
+
+              SizedBox(height: MediaQuery.of(context).padding.bottom),
+            ],
           ),
         ),
-
-        // Track info
-        _buildTrackInfo(track, textColor, secondaryTextColor, accentColor),
-
-        // Progress bar
-        _NowPlayingProgressBar(
-          duration: state.duration,
-          textColor: textColor,
-          secondaryColor: secondaryTextColor,
-          accentColor: accentColor,
-        ),
-
-        // Controls
-        _buildControls(state, playerService, textColor, accentColor),
-
-        // Gap between controls and tabs
-        const SizedBox(height: 34),
-
-        // Bottom tabs
-        _buildBottomTabs(textColor, accentColor),
-
-        const SizedBox(height: 16),
       ],
     );
   }
@@ -1184,7 +1194,11 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     );
   }
 
-  Widget _buildAlbumArt(Track track, Color accentColor) {
+  Widget _buildAlbumArt(
+    Track track,
+    Color accentColor, {
+    VoidCallback? onTap,
+  }) {
     final playerService = ref.watch(audioPlayerServiceProvider);
     final queue = playerService.queue;
     final currentIndex = playerService.currentIndex;
@@ -1209,97 +1223,116 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
               child: SizedBox(
                 width: artSize,
                 height: artSize,
-                // Swipeable album art using PageView
-                child: PageView.builder(
-                  controller: _albumArtPageController,
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: 3, // prev, current, next (virtual pages)
-                  onPageChanged: (pageIndex) {
-                    if (pageIndex == 0 && currentIndex > 0) {
-                      // Swiped right -> previous track
-                      playerService.skipToPrevious();
-                      // Reset to center after a short delay
-                      Future.delayed(const Duration(milliseconds: 300), () {
-                        if (mounted) {
-                          _albumArtPageController.jumpToPage(1);
+                child: Stack(
+                  children: [
+                    // Swipeable album art using PageView
+                    PageView.builder(
+                      controller: _albumArtPageController,
+                      clipBehavior: Clip.none,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: 3, // prev, current, next (virtual pages)
+                      onPageChanged: (pageIndex) {
+                        if (pageIndex == 0 && currentIndex > 0) {
+                          // Swiped right -> previous track
+                          playerService.skipToPrevious();
+                          // Reset to center after a short delay
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            if (mounted) {
+                              _albumArtPageController.jumpToPage(1);
+                            }
+                          });
+                        } else if (pageIndex == 2 &&
+                            currentIndex < queue.length - 1) {
+                          // Swiped left -> next track
+                          playerService.skipToNext();
+                          // Reset to center after a short delay
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            if (mounted) {
+                              _albumArtPageController.jumpToPage(1);
+                            }
+                          });
+                        } else {
+                          // Bounce back to center if can't navigate
+                          _albumArtPageController.animateToPage(
+                            1,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                          );
                         }
-                      });
-                    } else if (pageIndex == 2 &&
-                        currentIndex < queue.length - 1) {
-                      // Swiped left -> next track
-                      playerService.skipToNext();
-                      // Reset to center after a short delay
-                      Future.delayed(const Duration(milliseconds: 300), () {
-                        if (mounted) {
-                          _albumArtPageController.jumpToPage(1);
+                      },
+                      itemBuilder: (context, pageIndex) {
+                        // Get track for this page position
+                        Track? displayTrack;
+                        if (pageIndex == 0 && currentIndex > 0) {
+                          displayTrack = queue[currentIndex - 1];
+                        } else if (pageIndex == 1) {
+                          displayTrack = track;
+                        } else if (pageIndex == 2 &&
+                            currentIndex < queue.length - 1) {
+                          displayTrack = queue[currentIndex + 1];
                         }
-                      });
-                    } else {
-                      // Bounce back to center if can't navigate
-                      _albumArtPageController.animateToPage(
-                        1,
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOut,
-                      );
-                    }
-                  },
-                  itemBuilder: (context, pageIndex) {
-                    // Get track for this page position
-                    Track? displayTrack;
-                    if (pageIndex == 0 && currentIndex > 0) {
-                      displayTrack = queue[currentIndex - 1];
-                    } else if (pageIndex == 1) {
-                      displayTrack = track;
-                    } else if (pageIndex == 2 &&
-                        currentIndex < queue.length - 1) {
-                      displayTrack = queue[currentIndex + 1];
-                    }
 
-                    // Scale animation for non-center items
-                    final scale = pageIndex == 1 ? 1.0 : 0.85;
-                    final opacity = pageIndex == 1 ? 1.0 : 0.5;
+                        // Scale animation for non-center items
+                        final scale = pageIndex == 1 ? 1.0 : 0.85;
+                        final opacity = pageIndex == 1 ? 1.0 : 0.5;
 
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      transform: Matrix4.identity()..scale(scale),
-                      child: Opacity(
-                        opacity: opacity,
-                        child: Hero(
-                          tag: pageIndex == 1
-                              ? 'album-art-${track.id}'
-                              : 'album-art-side-$pageIndex',
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.4),
-                                  blurRadius: 30,
-                                  spreadRadius: 5,
-                                  offset: const Offset(0, 10),
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          transform: Matrix4.identity()..scale(scale),
+                          child: Opacity(
+                            opacity: opacity,
+                            child: Hero(
+                              tag: pageIndex == 1
+                                  ? 'album-art-${track.id}'
+                                  : 'album-art-side-$pageIndex',
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    // Ambient glow (YT Music style)
+                                    BoxShadow(
+                                      color: accentColor.withValues(alpha: 0.55),
+                                      blurRadius: 90,
+                                      spreadRadius: 24,
+                                      offset: const Offset(0, 26),
+                                    ),
+                                    BoxShadow(
+                                      color: accentColor.withValues(alpha: 0.25),
+                                      blurRadius: 140,
+                                      spreadRadius: 40,
+                                      offset: const Offset(0, 36),
+                                    ),
+                                    // Depth shadow for contrast
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.35),
+                                      blurRadius: 30,
+                                      spreadRadius: 5,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: displayTrack?.thumbnailUrl != null
-                                  ? CachedNetworkImage(
-                                      imageUrl: displayTrack!.thumbnailUrl!
-                                          .replaceAll('w120-h120', 'w600-h600'),
-                                      fit: BoxFit.cover,
-                                      placeholder: (_, __) =>
-                                          _defaultArt(accentColor),
-                                      errorWidget: (_, __, ___) =>
-                                          _defaultArt(accentColor),
-                                    )
-                                  : _defaultArt(accentColor),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: _buildAlbumArtContent(
+                                    displayTrack,
+                                    accentColor,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
+                        );
+                      },
+                    ),
+                    if (onTap != null)
+                      Positioned.fill(
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(onTap: onTap),
                         ),
                       ),
-                    );
-                  },
+                  ],
                 ),
               ),
             ),
@@ -1314,6 +1347,101 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     final position =
         ref.watch(positionStreamProvider).valueOrNull ?? Duration.zero;
     return LyricsView(currentPosition: position);
+  }
+
+  Widget _buildAlbumArtContent(Track? displayTrack, Color accentColor) {
+    final imageUrl = displayTrack?.thumbnailUrl != null
+        ? displayTrack!.thumbnailUrl!.replaceAll('w120-h120', 'w600-h600')
+        : null;
+
+    if (imageUrl == null) {
+      return _defaultArt(accentColor);
+    }
+
+    return CachedNetworkImage(
+      imageUrl: imageUrl,
+      fit: BoxFit.fill,
+      alignment: Alignment.center,
+      placeholder: (_, __) => _defaultArt(accentColor),
+      errorWidget: (_, __, ___) => _defaultArt(accentColor),
+    );
+  }
+
+  Widget _buildSyncedLyricPreview(Color textColor) {
+    final lyricsState = ref.watch(lyricsProvider);
+    final result = lyricsState.currentLyrics;
+
+    if (result == null || !result.hasSyncedLyrics) {
+      return const SizedBox(height: _syncedLyricPreviewHeight);
+    }
+
+    final position =
+        ref.watch(positionStreamProvider).valueOrNull ?? Duration.zero;
+    final positionMs = position.inMilliseconds;
+    final lines = result.lines!;
+
+    int currentIdx = -1;
+    for (int i = 0; i < lines.length; i++) {
+      if (lines[i].timeInMs <= positionMs) {
+        currentIdx = i;
+      } else {
+        break;
+      }
+    }
+
+    if (currentIdx < 0) {
+      return const SizedBox(height: _syncedLyricPreviewHeight);
+    }
+
+    final text = lines[currentIdx].text.trim();
+    if (text.isEmpty) {
+      return const SizedBox(height: _syncedLyricPreviewHeight);
+    }
+
+    return SizedBox(
+      height: _syncedLyricPreviewHeight,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 6, 24, 6),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 380),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeOutCubic,
+          transitionBuilder: (child, animation) {
+            final curved = CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            );
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 0.06),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            );
+          },
+          layoutBuilder: (currentChild, previousChildren) {
+            return currentChild ?? const SizedBox.shrink();
+          },
+          child: Align(
+            key: ValueKey('lyric_$currentIdx'),
+            alignment: Alignment.centerLeft,
+            child: Text(
+              text,
+              maxLines: 3,
+              overflow: TextOverflow.clip,
+              softWrap: true,
+              textAlign: TextAlign.left,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: textColor.withValues(alpha: 0.95),
+                height: 1.15,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildTrackInfo(
@@ -1332,14 +1460,14 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
               children: [
                 // Marquee for long titles
                 SizedBox(
-                  height: 28,
+                  height: 26,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       final textPainter = TextPainter(
                         text: TextSpan(
                           text: track.title,
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: textColor,
                           ),
@@ -1353,7 +1481,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                         return Marquee(
                           text: track.title,
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: textColor,
                           ),
@@ -1376,7 +1504,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 22,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: textColor,
                         ),

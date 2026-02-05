@@ -7,6 +7,7 @@ import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import 'playback/playback.dart';
+import 'youtube_music_service.dart';
 import 'ytmusic_api_service.dart';
 import 'queue_persistence_service.dart';
 
@@ -247,6 +248,11 @@ class AudioPlayerService {
   AudioQuality _audioQuality = AudioQuality.auto;
   String?
   _queueSourceId; // Track which playlist/album/artist started this queue
+  Duration? _pendingSeekPosition;
+  String? _pendingSeekTrackId;
+  bool _durationMigrationInProgress = false;
+  static const String _durationMigrationKey =
+      'persisted_queue_duration_migrated_v1';
 
   /// Load streaming quality from SharedPreferences on init
   Future<void> _loadStreamingQuality() async {
@@ -421,7 +427,14 @@ class AudioPlayerService {
 
     // Listen to duration changes
     _player.durationStream.listen((duration) {
-      _updateState(duration: duration);
+      final didUpdateDuration =
+          duration != null && _applyDurationToCurrentTrack(duration);
+      _updateState(
+        duration: duration,
+        currentTrack: _currentTrack,
+        queue: _queue,
+        queueRevision: didUpdateDuration ? _queueRevision : null,
+      );
       // Reset prefetch flag for new track
       _prefetchTriggered = false;
     });
@@ -475,6 +488,64 @@ class AudioPlayerService {
 
       // Could implement retry logic here
       _updateState(error: 'Playback error: ${error.toString()}');
+    }
+  }
+
+  bool _applyDurationToCurrentTrack(Duration duration) {
+    if (_currentTrack == null) return false;
+    if (duration <= Duration.zero) return false;
+    if (_currentTrack!.duration == duration) return false;
+
+    final updatedTrack = _currentTrack!.copyWith(duration: duration);
+    _currentTrack = updatedTrack;
+
+    if (_currentIndex >= 0 && _currentIndex < _queue.length) {
+      _queue[_currentIndex] = updatedTrack;
+    }
+
+    for (int i = 0; i < _originalQueue.length; i++) {
+      if (_originalQueue[i].id == updatedTrack.id) {
+        _originalQueue[i] = updatedTrack;
+        break;
+      }
+    }
+
+    _queueRevision++;
+    _saveQueueDebounced();
+    return true;
+  }
+
+  Future<void> _runDurationMigrationIfNeeded() async {
+    if (_durationMigrationInProgress) return;
+    if (_currentTrack == null) return;
+    if (_currentTrack!.duration > Duration.zero) return;
+
+    try {
+      _durationMigrationInProgress = true;
+      final prefs = await SharedPreferences.getInstance();
+      final migrated = prefs.getBool(_durationMigrationKey) ?? false;
+      if (migrated) return;
+
+      final ytService = YouTubeMusicService();
+      final fetched = await ytService.getTrack(_currentTrack!.id);
+      if (fetched == null || fetched.duration <= Duration.zero) return;
+
+      final didUpdate = _applyDurationToCurrentTrack(fetched.duration);
+      if (didUpdate) {
+        _updateState(
+          duration: fetched.duration,
+          currentTrack: _currentTrack,
+          queue: _queue,
+          queueRevision: _queueRevision,
+        );
+        await prefs.setBool(_durationMigrationKey, true);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('AudioPlayerService: Duration migration failed: $e');
+      }
+    } finally {
+      _durationMigrationInProgress = false;
     }
   }
 
@@ -884,6 +955,11 @@ class AudioPlayerService {
 
     _currentTrack = _queue[_currentIndex];
     _currentPlaybackData = null;
+    if (_pendingSeekTrackId != null &&
+        _pendingSeekTrackId != _currentTrack!.id) {
+      _pendingSeekPosition = null;
+      _pendingSeekTrackId = null;
+    }
 
     // Show loading state immediately
     _updateState(
@@ -933,6 +1009,14 @@ class AudioPlayerService {
               await _player.setAudioSource(
                 AudioSource.uri(fileUri, tag: _currentTrack),
               );
+              if (_pendingSeekPosition != null &&
+                  _pendingSeekTrackId == _currentTrack!.id) {
+                await _player.seek(_pendingSeekPosition);
+                _positionController.add(_pendingSeekPosition!);
+                _updateState(position: _pendingSeekPosition);
+                _pendingSeekPosition = null;
+                _pendingSeekTrackId = null;
+              }
               _player.play();
               _updateState(isLoading: false);
               return;
@@ -1013,6 +1097,15 @@ class AudioPlayerService {
         // Pre-buffer ahead for smoother playback
         preload: true,
       );
+
+      if (_pendingSeekPosition != null &&
+          _pendingSeekTrackId == _currentTrack!.id) {
+        await _player.seek(_pendingSeekPosition);
+        _positionController.add(_pendingSeekPosition!);
+        _updateState(position: _pendingSeekPosition);
+        _pendingSeekPosition = null;
+        _pendingSeekTrackId = null;
+      }
 
       final bufferTime = stopwatch.elapsedMilliseconds;
       if (kDebugMode) {
@@ -1255,6 +1348,15 @@ class AudioPlayerService {
 
   /// Play
   Future<void> play() async {
+    if (_currentTrack == null) return;
+
+    // If no source is loaded (e.g., app restarted), load and play current track.
+    if (_player.processingState == ProcessingState.idle ||
+        _player.audioSource == null) {
+      await _loadAndPlayCurrent();
+      return;
+    }
+
     // Check if current stream is still valid
     if (_currentPlaybackData != null && !_currentPlaybackData!.isValid) {
       if (kDebugMode) {
@@ -1477,6 +1579,15 @@ class AudioPlayerService {
         _currentIndex = persistedState.currentIndex;
         _currentTrack = persistedState.currentTrack;
         _queueRevision++;
+        final restoredDuration = _currentTrack?.duration;
+        final hasRestoredDuration =
+            restoredDuration != null && restoredDuration > Duration.zero;
+        if (persistedState.position > Duration.zero &&
+            _currentTrack != null) {
+          _pendingSeekPosition = persistedState.position;
+          _pendingSeekTrackId = _currentTrack!.id;
+          _positionController.add(persistedState.position);
+        }
 
         // Update state to show restored queue (but don't auto-play)
         _updateState(
@@ -1484,7 +1595,13 @@ class AudioPlayerService {
           queueRevision: _queueRevision,
           currentIndex: _currentIndex,
           currentTrack: _currentTrack,
+          position: persistedState.position,
+          duration: hasRestoredDuration ? restoredDuration : null,
         );
+
+        if (!hasRestoredDuration) {
+          unawaited(_runDurationMigrationIfNeeded());
+        }
       }
     } catch (e) {
       if (kDebugMode) {

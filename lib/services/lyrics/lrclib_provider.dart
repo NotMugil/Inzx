@@ -104,9 +104,12 @@ class LRCLibProvider implements LyricsProvider {
     final closest = filtered.first;
 
     // Check duration is close enough (within 15 seconds)
-    final durationDiff = ((closest['duration'] as num) - info.durationSeconds)
-        .abs();
-    if (durationDiff > 15) return null;
+    // If track duration is unknown (0) or missing in result, skip this filter.
+    final duration = closest['duration'] as num?;
+    if (info.durationSeconds > 0 && duration != null) {
+      final durationDiff = (duration - info.durationSeconds).abs();
+      if (durationDiff > 15) return null;
+    }
 
     // Skip instrumental
     if (closest['instrumental'] == true) return null;

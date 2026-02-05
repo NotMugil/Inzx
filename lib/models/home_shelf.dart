@@ -56,14 +56,41 @@ class HomeShelfItem extends Equatable {
   /// Convert to Track if it's a song
   Track? toTrack() {
     if (itemType != HomeShelfItemType.song) return null;
+    final artistName = _extractArtistFromSubtitle(subtitle);
+    final duration = _extractDurationFromSubtitle(subtitle);
     return Track(
       id: videoId ?? id,
       title: title,
-      artist: subtitle ?? 'Unknown Artist',
+      artist: artistName,
       artistId: artistId ?? '',
       thumbnailUrl: thumbnailUrl,
-      duration: Duration.zero,
+      duration: duration,
     );
+  }
+
+  static String _extractArtistFromSubtitle(String? subtitle) {
+    final raw = subtitle?.trim();
+    if (raw == null || raw.isEmpty) return 'Unknown Artist';
+
+    // YT Music often uses bullets to separate artist / album / duration.
+    final parts = raw.split(RegExp(r'\s[\u2022\u00B7\u22C5]\s'));
+    final artistPart = parts.isNotEmpty ? parts.first.trim() : raw;
+    return artistPart.isNotEmpty ? artistPart : raw;
+  }
+
+  static Duration _extractDurationFromSubtitle(String? subtitle) {
+    if (subtitle == null || subtitle.isEmpty) return Duration.zero;
+
+    // Match m:ss or h:mm:ss anywhere in subtitle.
+    final match = RegExp(r'(?:(\d{1,2}):)?(\d{1,2}):(\d{2})').firstMatch(
+      subtitle,
+    );
+    if (match == null) return Duration.zero;
+
+    final hours = match.group(1) != null ? int.parse(match.group(1)!) : 0;
+    final minutes = int.parse(match.group(2)!);
+    final seconds = int.parse(match.group(3)!);
+    return Duration(hours: hours, minutes: minutes, seconds: seconds);
   }
 
   /// Convert to Playlist if it's a playlist/mix
