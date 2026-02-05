@@ -1,7 +1,5 @@
 <div align="center">
-
-<img src="assets/icon/logo.png" alt="Nivio Logo" width="200"/>
-
+	<img src="assets/icon/logo.png" alt="Inzx Logo" width="200"/>
 <h1>Inzx</h1>
 
 **A modern YouTube Music client with dynamic theming and real-time Jam sessions**
@@ -31,6 +29,7 @@
 - **Dark/Light Mode** - Automatic theme switching
 - **Smooth Animations** - Fluid transitions and micro-interactions
 - **Album Art Visualization** - Stunning now-playing screen with palette-based theming
+- **Lyrics Preview** - Focused lyrics display with real time with song
 
 ### 👥 Collaborative Listening (Jams)
 - **Real-time Sync** - Listen together with friends in real-time
@@ -60,11 +59,11 @@
 
 | Home | Now Playing | Library | Jams |
 |------|-------------|---------|------|
-| ![Home](screenshots/home.png) | ![Now Playing](screenshots/now_playing.png) | ![Library](screenshots/library.png) | ![Jams](screenshots/jams.png) |
+| ![Home](./.github/screenshots/preview-home.png) | ![Now Playing](./.github/screenshots/preview-nowplaying.png) | ![Library](./.github/screenshots/preview-library.png) | ![Jams](./.github/screenshots/preview-jam.png) |
 
 | Search | Playlist | Folders | Settings |
 |--------|----------|-----------|----------|
-| ![Search](screenshots/search.png) | ![Playlist](screenshots/playlist.png) | ![Folders](screenshots/folders.png) | ![Settings](screenshots/settings.png) |
+| ![Search](./.github/screenshots/preview-search.png) | ![Playlist](./.github/screenshots/preview-playlist.png) | ![Folders](./.github/screenshots/preview-folders.png) | ![Lyrics](./.github/screenshots/preview-lyrics.png) |
 
 </div>
 
@@ -330,9 +329,8 @@ Contributions are welcome! Please follow these guidelines:
 
 ## 🐛 Known Issues
 
-- [ ] Splash screen duration may be brief on fast devices
-- [ ] Some YT Music features require active internet connection
-- [ ] Jams feature requires Supabase configuration
+- [ ] No Background sync for jams
+- [ ] No Widget support (yet)
 
 ---
 
@@ -342,8 +340,7 @@ Contributions are welcome! Please follow these guidelines:
 - [ ] **Android Auto** - Car integration
 - [ ] **Chromecast support** - Cast to speakers
 - [ ] **Desktop support** - Windows, macOS, Linux builds
-- [ ] **Social features** - Share listening activity
-- [ ] **Advanced statistics** - Listening history and insights
+- [ ] **AI DJ Integration** - Suggest albums, music, and playlists based on user's preferences and prompts
 
 ---
 
