@@ -21,6 +21,7 @@ class SignatureCipherDecryptor {
   /// Cached decryption steps
   List<_TransformStep>? _cachedSteps;
   String? _cachedPlayerJsUrl;
+  String? _cachedPlayerJsContent;
 
   /// Decrypt a signature cipher to get the final URL
   Future<String?> decrypt(String cipher) async {
@@ -70,37 +71,13 @@ class SignatureCipherDecryptor {
     }
 
     try {
-      // First, get the player.js URL from YouTube
-      final playerJsUrl = await _getPlayerJsUrl();
-      if (playerJsUrl == null) {
-        if (kDebugMode) {
-          print('SignatureCipher: Could not find player.js URL');
-        }
-        return null;
-      }
-
-      // Check if we already have steps for this player version
-      if (playerJsUrl == _cachedPlayerJsUrl && _cachedSteps != null) {
-        return _cachedSteps;
-      }
-
-      // Fetch player.js
-      final response = await _client
-          .get(Uri.parse(playerJsUrl))
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode != 200) {
-        if (kDebugMode) {
-          print('SignatureCipher: Failed to fetch player.js');
-        }
-        return null;
-      }
+      final playerJs = await _getPlayerJsContent();
+      if (playerJs == null) return null;
 
       // Extract decryption steps
-      final steps = _extractDecryptionSteps(response.body);
+      final steps = _extractDecryptionSteps(playerJs);
       if (steps != null) {
         _cachedSteps = steps;
-        _cachedPlayerJsUrl = playerJsUrl;
       }
 
       return steps;
@@ -110,6 +87,36 @@ class SignatureCipherDecryptor {
       }
       return null;
     }
+  }
+
+  Future<String?> _getPlayerJsContent() async {
+    final playerJsUrl = await _getPlayerJsUrl();
+    if (playerJsUrl == null) {
+      if (kDebugMode) {
+        print('SignatureCipher: Could not find player.js URL');
+      }
+      return null;
+    }
+
+    if (playerJsUrl == _cachedPlayerJsUrl && _cachedPlayerJsContent != null) {
+      return _cachedPlayerJsContent;
+    }
+
+    final response = await _client
+        .get(Uri.parse(playerJsUrl))
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200) {
+      if (kDebugMode) {
+        print('SignatureCipher: Failed to fetch player.js');
+      }
+      return null;
+    }
+
+    final playerVersionChanged = playerJsUrl != _cachedPlayerJsUrl;
+    _cachedPlayerJsUrl = playerJsUrl;
+    _cachedPlayerJsContent = response.body;
+    if (playerVersionChanged) _cachedSteps = null;
+    return _cachedPlayerJsContent;
   }
 
   /// Get the player.js URL from YouTube embed page
@@ -352,6 +359,7 @@ class SignatureCipherDecryptor {
   void clearCache() {
     _cachedSteps = null;
     _cachedPlayerJsUrl = null;
+    _cachedPlayerJsContent = null;
   }
 
   void dispose() {

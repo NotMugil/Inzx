@@ -10,6 +10,8 @@ class LRCLibProvider implements LyricsProvider {
   String get name => 'LRCLib';
 
   static const _baseUrl = 'https://lrclib.net';
+  static const _requestTimeout = Duration(seconds: 8);
+  static final http.Client _client = http.Client();
 
   @override
   Future<LyricResult?> search(LyricsSearchInfo info) async {
@@ -37,10 +39,9 @@ class LRCLibProvider implements LyricsProvider {
     final uri = Uri.parse(
       '$_baseUrl/api/search',
     ).replace(queryParameters: params);
-    final response = await http.get(
-      uri,
-      headers: {'Accept': 'application/json'},
-    );
+    final response = await _client
+        .get(uri, headers: {'Accept': 'application/json'})
+        .timeout(_requestTimeout);
 
     if (response.statusCode != 200) return null;
 
@@ -56,10 +57,9 @@ class LRCLibProvider implements LyricsProvider {
       '$_baseUrl/api/search',
     ).replace(queryParameters: {'q': query});
 
-    final response = await http.get(
-      uri,
-      headers: {'Accept': 'application/json'},
-    );
+    final response = await _client
+        .get(uri, headers: {'Accept': 'application/json'})
+        .timeout(_requestTimeout);
 
     if (response.statusCode != 200) return null;
 

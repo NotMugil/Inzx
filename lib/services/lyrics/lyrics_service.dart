@@ -27,6 +27,102 @@ extension ProviderNameExt on ProviderName {
   }
 }
 
+/// Lightweight background lyrics warmup for playback.
+/// Prioritizes LRCLib for fastest synced lyric availability.
+class LyricsWarmupService {
+  static final LyricsWarmupService instance = LyricsWarmupService._();
+  LyricsWarmupService._();
+
+  final LRCLibProvider _lrclib = LRCLibProvider();
+  final GeniusProvider _genius = GeniusProvider();
+  final Set<String> _inFlight = <String>{};
+
+  Future<void> prefetchForTrack({
+    required String videoId,
+    required String title,
+    required String artist,
+    String? album,
+    required int durationSeconds,
+  }) async {
+    if (videoId.isEmpty) return;
+    if (_inFlight.contains(videoId)) return;
+    if (_hasCachedLyrics(videoId)) return;
+
+    _inFlight.add(videoId);
+    try {
+      final info = LyricsSearchInfo(
+        videoId: videoId,
+        title: title,
+        artist: artist,
+        album: album,
+        durationSeconds: durationSeconds,
+      );
+
+      LyricResult? result = await _lrclib.search(info);
+      if (result == null || !result.hasLyrics) {
+        result = await _genius.search(info);
+      }
+      if (result == null || !result.hasLyrics) return;
+
+      _cacheLyrics(videoId, title, artist, result);
+      if (kDebugMode) {
+        print(
+          'LyricsService: Warmed lyrics for $videoId using ${result.source}',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('LyricsService: Warmup failed for $videoId: $e');
+      }
+    } finally {
+      _inFlight.remove(videoId);
+    }
+  }
+
+  bool _hasCachedLyrics(String videoId) {
+    try {
+      final cached = HiveService.lyricsBox.get(videoId);
+      return cached != null && !cached.isExpired && cached.hasLyrics;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _cacheLyrics(
+    String videoId,
+    String title,
+    String artist,
+    LyricResult result,
+  ) {
+    final entity = LyricsEntity(
+      trackId: videoId,
+      title: title,
+      artist: artist,
+      syncedLyrics: _linesToLrc(result.lines),
+      plainLyrics: result.lyrics,
+      provider: result.source,
+      cachedAt: DateTime.now(),
+      ttlDays: 7,
+    );
+    HiveService.lyricsBox.put(videoId, entity);
+  }
+
+  String? _linesToLrc(List<LyricLine>? lines) {
+    if (lines == null || lines.isEmpty) return null;
+    final buffer = StringBuffer();
+    for (final line in lines) {
+      final minutes = (line.timeInMs ~/ 60000).toString().padLeft(2, '0');
+      final seconds = ((line.timeInMs % 60000) ~/ 1000).toString().padLeft(
+        2,
+        '0',
+      );
+      final millis = ((line.timeInMs % 1000) ~/ 10).toString().padLeft(2, '0');
+      buffer.writeln('[$minutes:$seconds.$millis]${line.text}');
+    }
+    return buffer.toString();
+  }
+}
+
 /// Lyrics state for a track
 class LyricsState {
   final String? videoId;
@@ -76,6 +172,14 @@ class LyricsNotifier extends StateNotifier<LyricsState> {
 
   /// Fetch lyrics for a track from all providers (with caching)
   Future<void> fetchLyrics(LyricsSearchInfo info) async {
+    // Ignore duplicate fetches for the same track while it's already loading.
+    if (state.videoId == info.videoId) {
+      final isAlreadyFetching = state.providers.values.any(
+        (s) => s.state == LyricsProviderState.fetching,
+      );
+      if (isAlreadyFetching) return;
+    }
+
     // Check cache first
     final cached = _getCachedLyrics(info.videoId);
     if (cached != null) {
@@ -114,8 +218,20 @@ class LyricsNotifier extends StateNotifier<LyricsState> {
       hasManuallySwitched: false,
     );
 
-    // Fetch from all providers in parallel
-    await Future.wait(providerNames.map((p) => _fetchFromProvider(p, info)));
+    // LRCLib is the primary source. If it succeeds, skip network fallback.
+    await _fetchFromProvider(ProviderName.lrclib, info);
+    final lrcLibStatus = state.providers[ProviderName.lrclib];
+    if ((lrcLibStatus?.data?.hasLyrics ?? false) &&
+        lrcLibStatus?.state == LyricsProviderState.done) {
+      if (!state.hasManuallySwitched) {
+        state = state.copyWith(currentProvider: ProviderName.lrclib);
+      }
+      _cacheBestResult(info);
+      return;
+    }
+
+    // Fallback provider
+    await _fetchFromProvider(ProviderName.genius, info);
 
     // Auto-select best provider if not manually switched
     if (!state.hasManuallySwitched) {
@@ -265,12 +381,13 @@ class LyricsNotifier extends StateNotifier<LyricsState> {
     int bias = 0;
 
     // Provider is done loading
-    if (status.state == LyricsProviderState.done)
+    if (status.state == LyricsProviderState.done) {
       bias += 1;
-    else if (status.state == LyricsProviderState.fetching)
+    } else if (status.state == LyricsProviderState.fetching) {
       bias -= 1;
-    else if (status.state == LyricsProviderState.error)
+    } else if (status.state == LyricsProviderState.error) {
       bias -= 2;
+    }
 
     // Has synced lyrics (most valuable)
     if (status.data?.hasSyncedLyrics ?? false) bias += 3;

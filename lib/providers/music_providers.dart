@@ -546,6 +546,43 @@ final audioQualityProvider = Provider<AudioQuality>((ref) {
   return state.whenOrNull(data: (s) => s.audioQuality) ?? AudioQuality.auto;
 });
 
+/// Provider for "pre-cache on Wi-Fi only" setting
+final streamCacheWifiOnlyProvider = Provider<bool>((ref) {
+  final state = ref.watch(playbackStateProvider);
+  return state.whenOrNull(data: (s) => s.streamCacheWifiOnly) ?? false;
+});
+
+/// Provider for stream byte-cache size limit in MB
+final streamCacheSizeLimitMbProvider = Provider<int>((ref) {
+  final state = ref.watch(playbackStateProvider);
+  return state.whenOrNull(data: (s) => s.streamCacheSizeLimitMb) ??
+      kDefaultStreamCacheSizeLimitMb;
+});
+
+/// Provider for max concurrent stream pre-cache downloads
+final streamCacheMaxConcurrentProvider = Provider<int>((ref) {
+  final state = ref.watch(playbackStateProvider);
+  return state.whenOrNull(data: (s) => s.streamCacheMaxConcurrent) ??
+      player.kDefaultStreamCacheMaxConcurrent;
+});
+
+/// Provider for crossfade duration in milliseconds
+final crossfadeDurationMsProvider = Provider<int>((ref) {
+  final state = ref.watch(playbackStateProvider);
+  return state.whenOrNull(data: (s) => s.crossfadeDurationMs) ??
+      player.kDefaultCrossfadeDurationMs;
+});
+
+/// Trigger provider to refresh cache usage reads
+final streamAudioCacheRefreshProvider = StateProvider<int>((ref) => 0);
+
+/// Provider for current stream byte-cache usage (bytes)
+final streamAudioCacheUsageBytesProvider = FutureProvider<int>((ref) async {
+  ref.watch(streamAudioCacheRefreshProvider);
+  final playerService = ref.watch(audioPlayerServiceProvider);
+  return playerService.getStreamAudioCacheSizeBytes();
+});
+
 /// Provider for playback speed
 final playbackSpeedProvider = Provider<double>((ref) {
   final state = ref.watch(playbackStateProvider);

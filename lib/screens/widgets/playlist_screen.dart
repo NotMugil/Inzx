@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
 import '../../providers/ytmusic_providers.dart';
+import '../../services/download_service.dart';
 import 'track_options_sheet.dart';
 import 'mini_player.dart';
 import 'now_playing_screen.dart';
@@ -395,11 +397,26 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                               children: [
                                 _buildCircleButton(
                                   Icons.download_rounded,
-                                  () {},
+                                  () {
+                                    if (context == null) return;
+                                    _downloadPlaylist(
+                                      context,
+                                      ref,
+                                      playlist,
+                                      allTracks,
+                                    );
+                                  },
                                 ),
                                 _buildCircleButton(
                                   Icons.add_box_outlined,
-                                  () {},
+                                  () {
+                                    if (context == null) return;
+                                    _addPlaylistToQueue(
+                                      context,
+                                      playerService,
+                                      allTracks,
+                                    );
+                                  },
                                 ),
 
                                 // Play Button (Toggle Play/Pause)
@@ -423,6 +440,10 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                                       if (isPlaylistPlaying && isPlaying) {
                                         // Only pause if this playlist is currently playing
                                         playerService.pause();
+                                      } else if (isPlaylistPlaying &&
+                                          !isPlaying) {
+                                        // Resume current playlist playback
+                                        playerService.togglePlayPause();
                                       } else {
                                         // Start playing this playlist from beginning
                                         // This handles both: resuming paused playlist AND starting fresh
@@ -436,10 +457,22 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                                   ),
                                 ),
 
-                                _buildCircleButton(Icons.share_outlined, () {}),
+                                _buildCircleButton(
+                                  Icons.share_outlined,
+                                  () => _sharePlaylist(playlist),
+                                ),
                                 _buildCircleButton(
                                   Icons.more_vert_rounded,
-                                  () {},
+                                  () {
+                                    if (context == null) return;
+                                    _showPlaylistOptions(
+                                      context,
+                                      ref,
+                                      playlist,
+                                      allTracks,
+                                      playerService,
+                                    );
+                                  },
                                 ),
                               ],
                             ),
@@ -580,6 +613,155 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
       child: IconButton(
         icon: Icon(icon, color: Colors.white),
         onPressed: onTap,
+      ),
+    );
+  }
+
+  void _sharePlaylist(Playlist playlist) {
+    final url = 'https://music.youtube.com/playlist?list=${playlist.id}';
+    Share.share(
+      '${playlist.title}\n$url',
+      subject: playlist.title,
+    );
+  }
+
+  void _downloadPlaylist(
+    BuildContext context,
+    WidgetRef? ref,
+    Playlist playlist,
+    List<Track> tracks,
+  ) {
+    if (ref == null || tracks.isEmpty) return;
+
+    final downloadManager = ref.read(downloadManagerProvider.notifier);
+    downloadManager.addMultipleToQueue(tracks);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Downloading ${tracks.length} tracks from ${playlist.title}',
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _addPlaylistToQueue(
+    BuildContext context,
+    dynamic playerService,
+    List<Track> tracks,
+  ) {
+    if (playerService == null || tracks.isEmpty) return;
+
+    for (final track in tracks) {
+      playerService.addToQueue(track);
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Added ${tracks.length} tracks to queue'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showPlaylistOptions(
+    BuildContext context,
+    WidgetRef? ref,
+    Playlist playlist,
+    List<Track> tracks,
+    dynamic playerService,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[700],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.play_arrow, color: Colors.white),
+                title: const Text('Play', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  if (playerService != null && tracks.isNotEmpty) {
+                    playerService.playQueue(
+                      tracks,
+                      startIndex: 0,
+                      sourceId: playlist.id,
+                    );
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.shuffle, color: Colors.white),
+                title: const Text(
+                  'Shuffle',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  if (playerService != null && tracks.isNotEmpty) {
+                    final shuffled = List<Track>.from(tracks)..shuffle();
+                    playerService.playQueue(
+                      shuffled,
+                      startIndex: 0,
+                      sourceId: playlist.id,
+                    );
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.playlist_add, color: Colors.white),
+                title: const Text(
+                  'Add to queue',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _addPlaylistToQueue(context, playerService, tracks);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.download, color: Colors.white),
+                title: const Text(
+                  'Download playlist',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _downloadPlaylist(context, ref, playlist, tracks);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.share, color: Colors.white),
+                title: const Text(
+                  'Share',
+                  style: TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _sharePlaylist(playlist);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
       ),
     );
   }

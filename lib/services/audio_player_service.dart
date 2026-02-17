@@ -1,8 +1,11 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode, kIsWeb;
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 import 'dart:math';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
@@ -10,9 +13,28 @@ import 'playback/playback.dart';
 import 'youtube_music_service.dart';
 import 'ytmusic_api_service.dart';
 import 'queue_persistence_service.dart';
+import 'lyrics/lyrics_service.dart';
 
 /// Key for persisting streaming quality preference
 const String kStreamingQualityKey = 'streaming_quality';
+const String kStreamCacheWifiOnlyKey = 'stream_cache_wifi_only';
+const String kStreamCacheSizeLimitMbKey = 'stream_cache_size_limit_mb';
+const String kStreamCacheMaxConcurrentKey = 'stream_cache_max_concurrent';
+const String kCrossfadeDurationMsKey = 'crossfade_duration_ms';
+const int kDefaultStreamCacheSizeLimitMb = 1024;
+const int kMinStreamCacheSizeLimitMb = 128;
+const int kMaxStreamCacheSizeLimitMb = 4096;
+const int kDefaultStreamCacheMaxConcurrent = 2;
+const int kMinStreamCacheMaxConcurrent = 1;
+const int kMaxStreamCacheMaxConcurrent = 4;
+const int kDefaultCrossfadeDurationMs = 0;
+const int kMinCrossfadeDurationMs = 0;
+const int kMaxCrossfadeDurationMs = 12000;
+const int kPrecacheAheadTrackCount = 3;
+const int kLyricsPrefetchAheadTrackCount = 4;
+const int kMinValidStreamCacheFileBytes = 50 * 1024;
+const int kParallelPrecacheMinBytes = 1024 * 1024;
+const int kParallelPrecachePartCount = 4;
 
 /// ConcatenatingAudioSource for gapless playback with pre-buffering
 /// This is the key to OuterTune's instant playback
@@ -38,6 +60,10 @@ class PlaybackState {
   final bool isRadioMode; // Whether radio mode is active (infinite queue)
   final bool
   isFetchingRadio; // Whether we're currently fetching more radio tracks
+  final bool streamCacheWifiOnly;
+  final int streamCacheSizeLimitMb;
+  final int streamCacheMaxConcurrent;
+  final int crossfadeDurationMs;
 
   const PlaybackState({
     this.currentTrack,
@@ -59,6 +85,10 @@ class PlaybackState {
     this.queueSourceId,
     this.isRadioMode = false,
     this.isFetchingRadio = false,
+    this.streamCacheWifiOnly = false,
+    this.streamCacheSizeLimitMb = kDefaultStreamCacheSizeLimitMb,
+    this.streamCacheMaxConcurrent = kDefaultStreamCacheMaxConcurrent,
+    this.crossfadeDurationMs = kDefaultCrossfadeDurationMs,
   });
 
   PlaybackState copyWith({
@@ -81,6 +111,10 @@ class PlaybackState {
     String? queueSourceId,
     bool? isRadioMode,
     bool? isFetchingRadio,
+    bool? streamCacheWifiOnly,
+    int? streamCacheSizeLimitMb,
+    int? streamCacheMaxConcurrent,
+    int? crossfadeDurationMs,
   }) {
     return PlaybackState(
       currentTrack: currentTrack ?? this.currentTrack,
@@ -102,6 +136,12 @@ class PlaybackState {
       queueSourceId: queueSourceId ?? this.queueSourceId,
       isRadioMode: isRadioMode ?? this.isRadioMode,
       isFetchingRadio: isFetchingRadio ?? this.isFetchingRadio,
+      streamCacheWifiOnly: streamCacheWifiOnly ?? this.streamCacheWifiOnly,
+      streamCacheSizeLimitMb:
+          streamCacheSizeLimitMb ?? this.streamCacheSizeLimitMb,
+      streamCacheMaxConcurrent:
+          streamCacheMaxConcurrent ?? this.streamCacheMaxConcurrent,
+      crossfadeDurationMs: crossfadeDurationMs ?? this.crossfadeDurationMs,
     );
   }
 
@@ -144,7 +184,11 @@ class PlaybackState {
         other.audioQuality == audioQuality &&
         other.duration == duration &&
         other.isRadioMode == isRadioMode &&
-        other.isFetchingRadio == isFetchingRadio;
+        other.isFetchingRadio == isFetchingRadio &&
+        other.streamCacheWifiOnly == streamCacheWifiOnly &&
+        other.streamCacheSizeLimitMb == streamCacheSizeLimitMb &&
+        other.streamCacheMaxConcurrent == streamCacheMaxConcurrent &&
+        other.crossfadeDurationMs == crossfadeDurationMs;
     // NOTE: position and bufferedPosition intentionally excluded
     // to prevent rebuilds on every position update
   }
@@ -165,6 +209,10 @@ class PlaybackState {
     duration,
     isRadioMode,
     isFetchingRadio,
+    streamCacheWifiOnly,
+    streamCacheSizeLimitMb,
+    streamCacheMaxConcurrent,
+    crossfadeDurationMs,
   );
 }
 
@@ -193,6 +241,7 @@ class AudioPlayerService {
     _init();
     // Load persisted streaming quality
     _loadStreamingQuality();
+    _loadStreamCacheSettings();
     // Load persisted queue from previous session
     _loadPersistedQueue();
   }
@@ -223,14 +272,18 @@ class AudioPlayerService {
   /// Check if radio is currently active
   bool get isRadioMode => _isRadioMode;
 
-  /// The underlying audio player (ExoPlayer on Android)
-  final AudioPlayer _player = AudioPlayer();
+  /// Dual-player engine for true overlap crossfade.
+  final AudioPlayer _primaryPlayer = AudioPlayer();
+  final AudioPlayer _secondaryPlayer = AudioPlayer();
+  late AudioPlayer _player = _primaryPlayer;
 
   /// OuterTune-style playback resolver
   final YTPlayerUtils _ytPlayerUtils = YTPlayerUtils.instance;
+  final LyricsWarmupService _lyricsWarmupService = LyricsWarmupService.instance;
 
   /// ConcatenatingAudioSource for gapless playback
   /// This allows pre-buffering next tracks for instant skip
+  // ignore: unused_field - retained for optional gapless rebuild strategy
   ConcatenatingAudioSource? _playlist;
 
   /// Map of videoId to index in playlist (for fast lookup)
@@ -246,13 +299,36 @@ class AudioPlayerService {
   Track? _currentTrack;
   PlaybackData? _currentPlaybackData;
   AudioQuality _audioQuality = AudioQuality.auto;
+  bool _streamCacheWifiOnly = false;
+  int _streamCacheSizeLimitMb = kDefaultStreamCacheSizeLimitMb;
+  int _streamCacheMaxConcurrent = kDefaultStreamCacheMaxConcurrent;
+  int _crossfadeDurationMs = kDefaultCrossfadeDurationMs;
   String?
   _queueSourceId; // Track which playlist/album/artist started this queue
   Duration? _pendingSeekPosition;
   String? _pendingSeekTrackId;
   bool _durationMigrationInProgress = false;
+  static const String _streamAudioCacheDirName = 'stream_audio_cache';
   static const String _durationMigrationKey =
       'persisted_queue_duration_migrated_v1';
+  final Connectivity _connectivity = Connectivity();
+  final Set<String> _precacheInProgress = <String>{};
+  final Queue<Completer<void>> _precacheSlotWaiters = Queue<Completer<void>>();
+  int _activePrecacheDownloads = 0;
+  bool _isPrecachingAhead = false;
+  bool _allowProxyCachingSource = true;
+  Timer? _cacheMaintenanceTimer;
+  final Map<String, Timer> _liveCacheLogTimers = {};
+  final Map<String, int> _liveCacheLastLoggedBytes = {};
+  final Map<String, DateTime> _liveCacheLastLoggedAt = {};
+  bool _isCrossfading = false;
+  bool _crossfadeTriggeredForTrack = false;
+  DateTime? _lastVolumeRecoveryAt;
+  static const _volumeRecoveryInterval = Duration(milliseconds: 800);
+  List<int> _activeSourceQueueIndices = const [];
+  Map<int, PlaybackData> _activeSourcePlaybackDataByQueueIndex =
+      const <int, PlaybackData>{};
+  static const _cacheMaintenanceInterval = Duration(minutes: 3);
 
   /// Load streaming quality from SharedPreferences on init
   Future<void> _loadStreamingQuality() async {
@@ -283,6 +359,1423 @@ class AudioPlayerService {
     } catch (e) {
       if (kDebugMode) {
         print('AudioPlayerService: Failed to save streaming quality: $e');
+      }
+    }
+  }
+
+  /// Load stream byte-cache settings from SharedPreferences.
+  Future<void> _loadStreamCacheSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      _streamCacheWifiOnly = prefs.getBool(kStreamCacheWifiOnlyKey) ?? false;
+      _streamCacheSizeLimitMb =
+          prefs.getInt(kStreamCacheSizeLimitMbKey) ??
+          kDefaultStreamCacheSizeLimitMb;
+      _streamCacheSizeLimitMb = _streamCacheSizeLimitMb.clamp(
+        kMinStreamCacheSizeLimitMb,
+        kMaxStreamCacheSizeLimitMb,
+      );
+      _streamCacheMaxConcurrent =
+          prefs.getInt(kStreamCacheMaxConcurrentKey) ??
+          kDefaultStreamCacheMaxConcurrent;
+      _streamCacheMaxConcurrent = _streamCacheMaxConcurrent.clamp(
+        kMinStreamCacheMaxConcurrent,
+        kMaxStreamCacheMaxConcurrent,
+      );
+      _crossfadeDurationMs =
+          prefs.getInt(kCrossfadeDurationMsKey) ?? kDefaultCrossfadeDurationMs;
+      _crossfadeDurationMs = _crossfadeDurationMs.clamp(
+        kMinCrossfadeDurationMs,
+        kMaxCrossfadeDurationMs,
+      );
+
+      _updateState(
+        streamCacheWifiOnly: _streamCacheWifiOnly,
+        streamCacheSizeLimitMb: _streamCacheSizeLimitMb,
+        streamCacheMaxConcurrent: _streamCacheMaxConcurrent,
+        crossfadeDurationMs: _crossfadeDurationMs,
+      );
+
+      unawaited(_applyCrossfadeDurationToPlayer());
+      unawaited(_enforceAudioCacheLimit());
+    } catch (e) {
+      if (kDebugMode) {
+        print('AudioPlayerService: Failed to load stream cache settings: $e');
+      }
+    }
+  }
+
+  bool get streamCacheWifiOnly => _streamCacheWifiOnly;
+  int get streamCacheSizeLimitMb => _streamCacheSizeLimitMb;
+  int get streamCacheMaxConcurrent => _streamCacheMaxConcurrent;
+  int get crossfadeDurationMs => _crossfadeDurationMs;
+  AudioPlayer get _inactivePlayer =>
+      identical(_player, _primaryPlayer) ? _secondaryPlayer : _primaryPlayer;
+
+  Future<void> _applyCrossfadeDurationToPlayer() async {
+    try {
+      if (_crossfadeDurationMs <= 0) {
+        _crossfadeTriggeredForTrack = false;
+        await _player.setVolume(1.0);
+        await _inactivePlayer.setVolume(1.0);
+      }
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Transition fade set to ${_crossfadeDurationMs}ms',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('AudioPlayerService: Failed to apply crossfade: $e');
+      }
+    }
+  }
+
+  Future<void> setStreamCacheWifiOnly(bool value) async {
+    _streamCacheWifiOnly = value;
+    _updateState(streamCacheWifiOnly: value);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(kStreamCacheWifiOnlyKey, value);
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Failed to persist wifi-only cache setting: $e',
+        );
+      }
+    }
+
+    if (!value) {
+      _schedulePrecacheAhead();
+    }
+  }
+
+  Future<void> setStreamCacheSizeLimitMb(int value) async {
+    final clamped = value.clamp(
+      kMinStreamCacheSizeLimitMb,
+      kMaxStreamCacheSizeLimitMb,
+    );
+    _streamCacheSizeLimitMb = clamped;
+    _updateState(streamCacheSizeLimitMb: clamped);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(kStreamCacheSizeLimitMbKey, clamped);
+    } catch (e) {
+      if (kDebugMode) {
+        print('AudioPlayerService: Failed to persist stream cache limit: $e');
+      }
+    }
+    await _enforceAudioCacheLimit();
+  }
+
+  Future<void> setStreamCacheMaxConcurrent(int value) async {
+    final clamped = value.clamp(
+      kMinStreamCacheMaxConcurrent,
+      kMaxStreamCacheMaxConcurrent,
+    );
+    _streamCacheMaxConcurrent = clamped;
+    _updateState(streamCacheMaxConcurrent: clamped);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(kStreamCacheMaxConcurrentKey, clamped);
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Failed to persist stream cache max concurrent: $e',
+        );
+      }
+    }
+    _schedulePrecacheAhead();
+  }
+
+  Future<void> setCrossfadeDurationMs(int value) async {
+    final clamped = value.clamp(
+      kMinCrossfadeDurationMs,
+      kMaxCrossfadeDurationMs,
+    );
+    _crossfadeDurationMs = clamped;
+    _updateState(crossfadeDurationMs: clamped);
+    await _applyCrossfadeDurationToPlayer();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(kCrossfadeDurationMsKey, clamped);
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Failed to persist crossfade duration setting: $e',
+        );
+      }
+    }
+  }
+
+  Duration get _crossfadeDuration =>
+      Duration(milliseconds: _crossfadeDurationMs);
+
+  Future<void> _setVolumeSafely(
+    AudioPlayer player,
+    double volume, {
+    String? context,
+  }) async {
+    try {
+      await player
+          .setVolume(volume)
+          .timeout(const Duration(milliseconds: 1200));
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: setVolume(${volume.toStringAsFixed(2)}) failed${context == null ? '' : ' [$context]'}: $e',
+        );
+      }
+    }
+  }
+
+  Future<void> _runOverlapFade({
+    required AudioPlayer outgoing,
+    required AudioPlayer incoming,
+    required Duration duration,
+  }) async {
+    if (duration <= Duration.zero) {
+      await Future.wait(<Future<void>>[
+        _setVolumeSafely(outgoing, 0.0, context: 'fade-immediate-out'),
+        _setVolumeSafely(incoming, 1.0, context: 'fade-immediate-in'),
+      ]);
+      return;
+    }
+
+    const steps = 24;
+    final stepDelayMs = (duration.inMilliseconds / steps).round().clamp(
+      10,
+      500,
+    );
+    final stepDelay = Duration(milliseconds: stepDelayMs);
+    try {
+      for (int step = 1; step <= steps; step++) {
+        final t = step / steps;
+        // Equal-power curve avoids perceived dip/silence in the middle.
+        final outgoingGain = cos(t * pi * 0.5);
+        final incomingGain = sin(t * pi * 0.5);
+        await Future.wait(<Future<void>>[
+          _setVolumeSafely(
+            outgoing,
+            outgoingGain.clamp(0.0, 1.0),
+            context: 'fade-step-$step-out',
+          ),
+          _setVolumeSafely(
+            incoming,
+            incomingGain.clamp(0.0, 1.0),
+            context: 'fade-step-$step-in',
+          ),
+        ]);
+        await Future.delayed(stepDelay);
+      }
+    } finally {
+      // Always force final settled volumes even if ramp loop is interrupted.
+      await Future.wait(<Future<void>>[
+        _setVolumeSafely(outgoing, 0.0, context: 'fade-final-out'),
+        _setVolumeSafely(incoming, 1.0, context: 'fade-final-in'),
+      ]);
+    }
+  }
+
+  Future<void> _stabilizeIncomingAfterCrossfade(AudioPlayer incoming) async {
+    // Some devices/platform stacks can briefly re-emit stale low volume state
+    // right after source/track handoff. Re-assert full gain a few times.
+    const retryDelaysMs = <int>[0, 120, 320, 700, 1400];
+    for (final delayMs in retryDelaysMs) {
+      if (delayMs > 0) {
+        await Future.delayed(Duration(milliseconds: delayMs));
+      }
+      if (!identical(_player, incoming)) return;
+      if (!incoming.playing) {
+        unawaited(incoming.play());
+      }
+      await _setVolumeSafely(incoming, 1.0, context: 'post-crossfade-stabilize');
+      if (incoming.volume >= 0.98) {
+        break;
+      }
+    }
+  }
+
+  void _recoverStuckVolumeIfNeeded() {
+    if (_isCrossfading) return;
+    if (_crossfadeDurationMs <= 0) return;
+    if (!_player.playing) return;
+    final currentVolume = _player.volume;
+    if (currentVolume >= 0.95) return;
+
+    final now = DateTime.now();
+    final last = _lastVolumeRecoveryAt;
+    if (last != null && now.difference(last) < _volumeRecoveryInterval) {
+      return;
+    }
+    _lastVolumeRecoveryAt = now;
+    if (kDebugMode) {
+      print(
+        'AudioPlayerService: Recovering stuck player volume ${currentVolume.toStringAsFixed(2)} -> 1.00',
+      );
+    }
+    unawaited(_setVolumeSafely(_player, 1.0, context: 'runtime-recovery'));
+  }
+
+  Future<({AudioSource source, PlaybackData? playbackData})>
+  _buildSourceForTrack(Track track) async {
+    if (track.localFilePath != null) {
+      final localFile = File(track.localFilePath!);
+      if (await localFile.exists()) {
+        final fileSize = await localFile.length();
+        if (fileSize >= 10000) {
+          return (
+            source: AudioSource.uri(Uri.file(track.localFilePath!), tag: track),
+            playbackData: null,
+          );
+        }
+      }
+    }
+
+    final result = await _ytPlayerUtils.playerResponseForPlayback(
+      track.id,
+      quality: _audioQuality,
+      isMetered: false,
+    );
+    if (!result.isSuccess || result.data == null) {
+      throw Exception(
+        result.error ?? 'Could not resolve stream for ${track.id}',
+      );
+    }
+
+    final playbackData = result.data!;
+    final source = await _streamingAudioSourceForTrack(
+      track,
+      playbackData,
+      preferDirectStreamWithBackgroundPrecache: true,
+    );
+    return (source: source, playbackData: playbackData);
+  }
+
+  int? _nextQueueIndexForTransition() {
+    if (_queue.isEmpty) return null;
+    if (_currentIndex < _queue.length - 1) return _currentIndex + 1;
+    if (_player.loopMode == LoopMode.all) return 0;
+    return null;
+  }
+
+  Future<void> _crossfadeToIndex(int targetIndex) async {
+    if (_isCrossfading) return;
+    if (_crossfadeDurationMs <= 0) {
+      _currentIndex = targetIndex;
+      _currentTrack = _queue[targetIndex];
+      await _loadAndPlayCurrent();
+      return;
+    }
+    if (targetIndex < 0 || targetIndex >= _queue.length) return;
+    if (_currentIndex == targetIndex) return;
+    if (_jamsModeEnabled) {
+      _currentIndex = targetIndex;
+      _currentTrack = _queue[targetIndex];
+      await _loadAndPlayCurrent();
+      return;
+    }
+
+    _isCrossfading = true;
+    final outgoingPlayer = _player;
+    final incomingPlayer = _inactivePlayer;
+    final targetTrack = _queue[targetIndex];
+    final sourceTrackId = _currentTrack?.id ?? 'unknown';
+
+    try {
+      final built = await _buildSourceForTrack(targetTrack);
+      await incomingPlayer.stop();
+      await incomingPlayer.setLoopMode(outgoingPlayer.loopMode);
+      await incomingPlayer.setSpeed(outgoingPlayer.speed);
+      await incomingPlayer.setAudioSource(built.source, preload: true);
+      await _setVolumeSafely(incomingPlayer, 0.12, context: 'crossfade-bootstrap');
+
+      _player = incomingPlayer;
+      _currentIndex = targetIndex;
+      _currentTrack = targetTrack;
+      _currentPlaybackData = built.playbackData;
+      _activeSourceQueueIndices = <int>[targetIndex];
+      _activeSourcePlaybackDataByQueueIndex = built.playbackData == null
+          ? const <int, PlaybackData>{}
+          : <int, PlaybackData>{targetIndex: built.playbackData!};
+      _crossfadeTriggeredForTrack = false;
+
+      _updateState(
+        currentTrack: _currentTrack,
+        currentIndex: _currentIndex,
+        currentPlaybackData: _currentPlaybackData,
+        isLoading: false,
+      );
+      _saveQueueDebounced();
+      _prefetchNextTrack();
+      _scheduleLyricsPrefetchAroundCurrent();
+
+      unawaited(incomingPlayer.play());
+      await Future.delayed(const Duration(milliseconds: 90));
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Crossfade started $sourceTrackId -> ${targetTrack.id} (${_crossfadeDurationMs}ms)',
+        );
+      }
+      await _runOverlapFade(
+        outgoing: outgoingPlayer,
+        incoming: incomingPlayer,
+        duration: _crossfadeDuration,
+      );
+
+      await outgoingPlayer.stop();
+      await _setVolumeSafely(outgoingPlayer, 1.0, context: 'crossfade-reset-outgoing');
+      await _setVolumeSafely(incomingPlayer, 1.0, context: 'crossfade-settle-incoming');
+      if (!incomingPlayer.playing) {
+        unawaited(incomingPlayer.play());
+      }
+      await _stabilizeIncomingAfterCrossfade(incomingPlayer);
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Crossfade completed on ${targetTrack.id}, incomingVolume=${incomingPlayer.volume.toStringAsFixed(2)}',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Crossfade failed, fallback to hard switch: $e',
+        );
+      }
+      _player = outgoingPlayer;
+      _currentIndex = targetIndex;
+      _currentTrack = _queue[targetIndex];
+      await _loadAndPlayCurrent();
+    } finally {
+      _isCrossfading = false;
+    }
+  }
+
+  void _maybeTriggerAutoCrossfade(Duration currentPosition) {
+    if (_crossfadeDurationMs <= 0) return;
+    if (_isCrossfading) return;
+    if (_crossfadeTriggeredForTrack) return;
+    if (_player.loopMode == LoopMode.one) return;
+    if (!_player.playing) return;
+
+    final duration = _player.duration;
+    if (duration == null || duration <= Duration.zero) return;
+    final remaining = duration - currentPosition;
+    if (remaining <= Duration.zero) return;
+
+    final triggerLeadMs = max(300, _crossfadeDurationMs + 120);
+    if (remaining.inMilliseconds > triggerLeadMs) return;
+
+    final nextIndex = _nextQueueIndexForTransition();
+    if (nextIndex == null) return;
+
+    _crossfadeTriggeredForTrack = true;
+    unawaited(_crossfadeToIndex(nextIndex));
+  }
+
+  int _effectivePrecacheConcurrency() {
+    return _streamCacheMaxConcurrent.clamp(
+      kMinStreamCacheMaxConcurrent,
+      kMaxStreamCacheMaxConcurrent,
+    );
+  }
+
+  Future<void> _acquirePrecacheSlot() async {
+    while (true) {
+      final limit = _effectivePrecacheConcurrency();
+      if (_activePrecacheDownloads < limit) {
+        _activePrecacheDownloads++;
+        return;
+      }
+
+      final waiter = Completer<void>();
+      _precacheSlotWaiters.add(waiter);
+      await waiter.future;
+    }
+  }
+
+  void _releasePrecacheSlot() {
+    if (_activePrecacheDownloads > 0) {
+      _activePrecacheDownloads--;
+    }
+
+    while (_precacheSlotWaiters.isNotEmpty) {
+      final waiter = _precacheSlotWaiters.removeFirst();
+      if (!waiter.isCompleted) {
+        waiter.complete();
+        break;
+      }
+    }
+  }
+
+  String _sanitizeCacheKey(String value) {
+    return value.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / 1024 / 1024).toStringAsFixed(2)} MB';
+    }
+    if (bytes >= 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '$bytes B';
+  }
+
+  String _formatTransferRate(double bytesPerSecond) {
+    if (bytesPerSecond >= 1024 * 1024) {
+      return '${(bytesPerSecond / 1024 / 1024).toStringAsFixed(2)} MB/s';
+    }
+    return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
+  }
+
+  void _applyPrecacheRequestHeaders(HttpClientRequest request) {
+    request.headers.set(HttpHeaders.acceptEncodingHeader, 'identity');
+    request.headers.set(
+      HttpHeaders.userAgentHeader,
+      'com.google.android.apps.youtube.music/7.16.53 (Linux; U; Android 14; Pixel 8) gzip',
+    );
+    request.headers.set(HttpHeaders.acceptHeader, '*/*');
+  }
+
+  Future<int?> _downloadWithParallelRanges({
+    required Track track,
+    required Uri streamUri,
+    required File tempFile,
+    required int expectedBytes,
+  }) async {
+    if (expectedBytes < kParallelPrecacheMinBytes) {
+      return null;
+    }
+
+    final partCount = min(
+      kParallelPrecachePartCount,
+      max(2, expectedBytes ~/ (512 * 1024)),
+    );
+
+    final parts = <({int start, int end, File file})>[];
+    int cursor = 0;
+    final basePartSize = expectedBytes ~/ partCount;
+    final remainder = expectedBytes % partCount;
+    for (int i = 0; i < partCount; i++) {
+      final partSize = basePartSize + (i < remainder ? 1 : 0);
+      final start = cursor;
+      final end = start + partSize - 1;
+      cursor = end + 1;
+      parts.add((
+        start: start,
+        end: end,
+        file: File('${tempFile.path}.seg$i.part'),
+      ));
+    }
+
+    if (kDebugMode) {
+      print(
+        'AudioPlayerService: Trying parallel part pre-cache for ${track.id} '
+        '(${_formatBytes(expectedBytes)}, parts=$partCount)',
+      );
+    }
+
+    int downloadedBytes = 0;
+    int nextProgressLogPercent = 10;
+    final downloadTimer = Stopwatch()..start();
+    int speedSampleBytes = 0;
+    int speedSampleMs = 0;
+
+    String sampleSpeed() {
+      final nowMs = downloadTimer.elapsedMilliseconds;
+      final elapsedMs = max(1, nowMs - speedSampleMs);
+      final deltaBytes = max(0, downloadedBytes - speedSampleBytes);
+      speedSampleBytes = downloadedBytes;
+      speedSampleMs = nowMs;
+      return _formatTransferRate(deltaBytes * 1000 / elapsedMs);
+    }
+
+    void maybeLogProgress() {
+      if (!kDebugMode) return;
+      final progress = ((downloadedBytes / expectedBytes) * 100).clamp(
+        0.0,
+        100.0,
+      );
+      if (progress < nextProgressLogPercent) return;
+      final speed = sampleSpeed();
+      debugPrint(
+        'AudioPlayerService: Parallel pre-cache progress ${track.id} '
+        '${progress.toStringAsFixed(1)}% '
+        '(${_formatBytes(downloadedBytes)} / ${_formatBytes(expectedBytes)} @ $speed)',
+      );
+      while (progress >= nextProgressLogPercent) {
+        nextProgressLogPercent += 10;
+      }
+    }
+
+    Future<void> cleanupParts() async {
+      for (final part in parts) {
+        if (await part.file.exists()) {
+          await part.file.delete();
+        }
+      }
+    }
+
+    try {
+      for (final part in parts) {
+        if (await part.file.exists()) {
+          await part.file.delete();
+        }
+      }
+
+      Future<void> downloadPart(({int start, int end, File file}) part) async {
+        HttpClient? partClient;
+        IOSink? partSink;
+        try {
+          partClient = HttpClient()
+            ..connectionTimeout = const Duration(seconds: 20);
+          final request = await partClient.getUrl(streamUri);
+          _applyPrecacheRequestHeaders(request);
+          request.headers.set(
+            HttpHeaders.rangeHeader,
+            'bytes=${part.start}-${part.end}',
+          );
+
+          final response = await request.close();
+          if (response.statusCode != 206) {
+            throw HttpException(
+              'Range request returned HTTP ${response.statusCode}',
+            );
+          }
+
+          partSink = part.file.openWrite(mode: FileMode.writeOnly);
+          int partBytes = 0;
+          await for (final chunk in response) {
+            partSink.add(chunk);
+            partBytes += chunk.length;
+            downloadedBytes += chunk.length;
+            maybeLogProgress();
+          }
+          await partSink.flush();
+          await partSink.close();
+          partSink = null;
+
+          final expectedPartBytes = part.end - part.start + 1;
+          if (partBytes != expectedPartBytes) {
+            throw FormatException(
+              'Range part size mismatch ($partBytes vs $expectedPartBytes)',
+            );
+          }
+        } finally {
+          if (partSink != null) {
+            await partSink.close();
+          }
+          partClient?.close(force: true);
+        }
+      }
+
+      await Future.wait(parts.map(downloadPart));
+
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+      final mergeSink = tempFile.openWrite(mode: FileMode.writeOnly);
+      try {
+        for (final part in parts) {
+          await mergeSink.addStream(part.file.openRead());
+        }
+        await mergeSink.flush();
+      } finally {
+        await mergeSink.close();
+      }
+
+      final mergedBytes = await tempFile.length();
+      if (mergedBytes != expectedBytes) {
+        throw FormatException(
+          'Merged range file size mismatch ($mergedBytes vs $expectedBytes)',
+        );
+      }
+
+      final elapsedMs = max(1, downloadTimer.elapsedMilliseconds);
+      final avgSpeed = _formatTransferRate(mergedBytes * 1000 / elapsedMs);
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Parallel pre-cache complete ${track.id} '
+          '(${_formatBytes(mergedBytes)}, avg $avgSpeed, parts=$partCount)',
+        );
+      }
+
+      await cleanupParts();
+      return mergedBytes;
+    } catch (e) {
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Parallel pre-cache fallback for ${track.id}: $e',
+        );
+      }
+      await cleanupParts();
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+      return null;
+    }
+  }
+
+  void _stopLiveCacheProgressLogger(String cachePath) {
+    _liveCacheLogTimers.remove(cachePath)?.cancel();
+    _liveCacheLastLoggedBytes.remove(cachePath);
+    _liveCacheLastLoggedAt.remove(cachePath);
+  }
+
+  void _stopAllLiveCacheProgressLoggers() {
+    for (final timer in _liveCacheLogTimers.values) {
+      timer.cancel();
+    }
+    _liveCacheLogTimers.clear();
+    _liveCacheLastLoggedBytes.clear();
+    _liveCacheLastLoggedAt.clear();
+  }
+
+  void _startLiveCacheProgressLogger({
+    required Track track,
+    required File cacheFile,
+    int? expectedBytes,
+  }) {
+    if (!kDebugMode || kIsWeb) return;
+
+    final cachePath = cacheFile.path;
+    if (_liveCacheLogTimers.containsKey(cachePath)) return;
+    _liveCacheLastLoggedAt[cachePath] = DateTime.now();
+
+    int idleTicks = 0;
+    if (expectedBytes != null && expectedBytes > 0) {
+      debugPrint(
+        'AudioPlayerService: Live cache monitor started for ${track.id} '
+        '(target ${_formatBytes(expectedBytes)})',
+      );
+    } else {
+      debugPrint(
+        'AudioPlayerService: Live cache monitor started for ${track.id}',
+      );
+    }
+
+    final timer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+      if (_liveCacheLogTimers[cachePath] != timer) {
+        timer.cancel();
+        return;
+      }
+
+      try {
+        if (!await cacheFile.exists()) {
+          idleTicks++;
+          if (idleTicks >= 20) {
+            _stopLiveCacheProgressLogger(cachePath);
+          }
+          return;
+        }
+
+        final size = await cacheFile.length();
+        final lastLoggedBytes = _liveCacheLastLoggedBytes[cachePath] ?? 0;
+        final grewEnough = size - lastLoggedBytes >= (512 * 1024);
+        final isComplete =
+            expectedBytes != null && expectedBytes > 0 && size >= expectedBytes;
+
+        if (!grewEnough && !isComplete) {
+          idleTicks++;
+          if (idleTicks >= 20) {
+            _stopLiveCacheProgressLogger(cachePath);
+          }
+          return;
+        }
+
+        idleTicks = 0;
+        final now = DateTime.now();
+        final lastAt = _liveCacheLastLoggedAt[cachePath] ?? now;
+        final elapsedMs = max(1, now.difference(lastAt).inMilliseconds);
+        final deltaBytes = max(0, size - lastLoggedBytes);
+        final throughput = _formatTransferRate(deltaBytes * 1000 / elapsedMs);
+        _liveCacheLastLoggedBytes[cachePath] = size;
+        _liveCacheLastLoggedAt[cachePath] = now;
+        if (expectedBytes != null && expectedBytes > 0) {
+          final progress = ((size / expectedBytes) * 100).clamp(0.0, 100.0);
+          debugPrint(
+            'AudioPlayerService: Live stream-cache progress ${track.id} '
+            '${progress.toStringAsFixed(1)}% '
+            '(${_formatBytes(size)} / ${_formatBytes(expectedBytes)} @ $throughput)',
+          );
+          if (isComplete) {
+            debugPrint(
+              'AudioPlayerService: Live stream-cache complete for ${track.id}',
+            );
+            _stopLiveCacheProgressLogger(cachePath);
+          }
+        } else {
+          debugPrint(
+            'AudioPlayerService: Live stream-cache progress ${track.id} '
+            '${_formatBytes(size)} (total size unknown @ $throughput)',
+          );
+        }
+      } catch (_) {
+        _stopLiveCacheProgressLogger(cachePath);
+      }
+    });
+
+    _liveCacheLogTimers[cachePath] = timer;
+  }
+
+  Future<Directory> _getStreamAudioCacheDir({bool create = true}) async {
+    final tempDir = await getTemporaryDirectory();
+    final cacheDir = Directory('${tempDir.path}/$_streamAudioCacheDirName');
+    if (create && !await cacheDir.exists()) {
+      await cacheDir.create(recursive: true);
+    }
+    return cacheDir;
+  }
+
+  Future<File> _cacheFileForTrack(
+    Track track,
+    PlaybackData playbackData,
+  ) async {
+    final cacheDir = await _getStreamAudioCacheDir();
+    final safeTrackId = _sanitizeCacheKey(track.id);
+    final cacheKey =
+        '${safeTrackId}_${_audioQuality.name}_${playbackData.format.bitrate}';
+    return File('${cacheDir.path}/$cacheKey.audio');
+  }
+
+  Future<bool> _isConnectedToWifi() async {
+    if (kIsWeb) return true;
+    try {
+      final connections = await _connectivity.checkConnectivity();
+      return connections.contains(ConnectivityResult.wifi) ||
+          connections.contains(ConnectivityResult.ethernet);
+    } catch (e) {
+      if (kDebugMode) {
+        print('AudioPlayerService: Connectivity check failed: $e');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> _canPrecacheOnCurrentNetwork() async {
+    if (!_streamCacheWifiOnly) return true;
+    return await _isConnectedToWifi();
+  }
+
+  Future<void> _touchCacheFile(File file) async {
+    try {
+      if (await file.exists()) {
+        await file.setLastModified(DateTime.now());
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _deleteAudioCacheArtifact(File file) async {
+    _stopLiveCacheProgressLogger(file.path);
+    final mimeFile = File('${file.path}.mime');
+    final partialFile = File('${file.path}.part');
+    final precachePartFile = File('${file.path}.precache.part');
+    if (await file.exists()) {
+      await file.delete();
+    }
+    if (await mimeFile.exists()) {
+      await mimeFile.delete();
+    }
+    if (await partialFile.exists()) {
+      await partialFile.delete();
+    }
+    if (await precachePartFile.exists()) {
+      await precachePartFile.delete();
+    }
+  }
+
+  Future<int> getStreamAudioCacheSizeBytes() async {
+    if (kIsWeb) return 0;
+    try {
+      final cacheDir = await _getStreamAudioCacheDir(create: false);
+      if (!await cacheDir.exists()) return 0;
+      int totalBytes = 0;
+      await for (final entity in cacheDir.list(followLinks: false)) {
+        if (entity is! File || !entity.path.endsWith('.audio')) continue;
+        totalBytes += await entity.length();
+      }
+      return totalBytes;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<void> _enforceAudioCacheLimit() async {
+    if (kIsWeb) return;
+    try {
+      final cacheDir = await _getStreamAudioCacheDir(create: false);
+      if (!await cacheDir.exists()) return;
+
+      final files = <File>[];
+      await for (final entity in cacheDir.list(followLinks: false)) {
+        if (entity is File && entity.path.endsWith('.audio')) {
+          files.add(entity);
+        }
+      }
+      if (files.isEmpty) return;
+
+      int totalSizeBytes = 0;
+      final fileStats = <({File file, int size, DateTime modified})>[];
+      for (final file in files) {
+        if (!await file.exists()) continue;
+        final stat = await file.stat();
+        final size = stat.size;
+        totalSizeBytes += size;
+        fileStats.add((file: file, size: size, modified: stat.modified));
+      }
+
+      final maxSizeBytes = _streamCacheSizeLimitMb * 1024 * 1024;
+      if (totalSizeBytes <= maxSizeBytes) return;
+
+      fileStats.sort((a, b) => a.modified.compareTo(b.modified));
+      for (final entry in fileStats) {
+        if (totalSizeBytes <= maxSizeBytes) break;
+        await _deleteAudioCacheArtifact(entry.file);
+        totalSizeBytes -= entry.size;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('AudioPlayerService: Failed to enforce cache limit: $e');
+      }
+    }
+  }
+
+  Future<AudioSource> _streamingAudioSourceForTrack(
+    Track track,
+    PlaybackData playbackData, {
+    bool preferDirectStreamWithBackgroundPrecache = false,
+  }) async {
+    final streamUri = Uri.parse(playbackData.streamUrl);
+    if (kIsWeb) {
+      return AudioSource.uri(streamUri, tag: track);
+    }
+
+    final cacheFile = await _cacheFileForTrack(track, playbackData);
+    if (await cacheFile.exists()) {
+      final size = await cacheFile.length();
+      if (size < kMinValidStreamCacheFileBytes) {
+        await _deleteAudioCacheArtifact(cacheFile);
+      } else {
+        _stopLiveCacheProgressLogger(cacheFile.path);
+        unawaited(_touchCacheFile(cacheFile));
+        final expectedBytes = playbackData.format.contentLength;
+        if (kDebugMode) {
+          if (expectedBytes != null && expectedBytes > 0) {
+            final progress = ((size / expectedBytes) * 100).clamp(0.0, 100.0);
+            print(
+              'AudioPlayerService: Using cached audio bytes for ${track.id} '
+              '(${_formatBytes(size)} / ${_formatBytes(expectedBytes)}, ${progress.toStringAsFixed(1)}%)',
+            );
+          } else {
+            print(
+              'AudioPlayerService: Using cached audio bytes for ${track.id} '
+              '(${_formatBytes(size)})',
+            );
+          }
+        }
+        return AudioSource.uri(Uri.file(cacheFile.path), tag: track);
+      }
+    }
+
+    // Avoid competing writers for the same cache file.
+    if (_precacheInProgress.contains(track.id)) {
+      _stopLiveCacheProgressLogger(cacheFile.path);
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Pre-cache in progress for ${track.id}, using direct stream',
+        );
+      }
+      return AudioSource.uri(streamUri, tag: track);
+    }
+
+    if (!_allowProxyCachingSource) {
+      _stopLiveCacheProgressLogger(cacheFile.path);
+      if (preferDirectStreamWithBackgroundPrecache) {
+        if (await _canPrecacheOnCurrentNetwork()) {
+          unawaited(_precacheTrackAudioBytes(track, playbackData));
+        } else if (kDebugMode) {
+          print(
+            'AudioPlayerService: Skipping aggressive background cache for ${track.id} (Wi-Fi only)',
+          );
+        }
+      }
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Proxy caching disabled, using direct stream for ${track.id}',
+        );
+      }
+      return AudioSource.uri(streamUri, tag: track);
+    }
+
+    if (preferDirectStreamWithBackgroundPrecache) {
+      _stopLiveCacheProgressLogger(cacheFile.path);
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Using direct stream + aggressive background cache for ${track.id}',
+        );
+      }
+      if (await _canPrecacheOnCurrentNetwork()) {
+        unawaited(_precacheTrackAudioBytes(track, playbackData));
+      } else if (kDebugMode) {
+        print(
+          'AudioPlayerService: Skipping aggressive background cache for ${track.id} (Wi-Fi only)',
+        );
+      }
+      return AudioSource.uri(streamUri, tag: track);
+    }
+
+    if (kDebugMode) {
+      print(
+        'AudioPlayerService: Streaming + caching audio bytes for ${track.id}',
+      );
+    }
+    _startLiveCacheProgressLogger(
+      track: track,
+      cacheFile: cacheFile,
+      expectedBytes: playbackData.format.contentLength,
+    );
+    return LockCachingAudioSource(streamUri, cacheFile: cacheFile, tag: track);
+  }
+
+  ({
+    AudioSource source,
+    List<int> queueIndices,
+    Map<int, PlaybackData> playbackDataByQueueIndex,
+  })
+  _singleTrackSourcePlan(AudioSource source, PlaybackData playbackData) {
+    return (
+      source: source,
+      queueIndices: <int>[_currentIndex],
+      playbackDataByQueueIndex: <int, PlaybackData>{
+        _currentIndex: playbackData,
+      },
+    );
+  }
+
+  Future<
+    ({
+      AudioSource source,
+      List<int> queueIndices,
+      Map<int, PlaybackData> playbackDataByQueueIndex,
+    })
+  >
+  _buildPlaybackSourcePlanForCurrentTrack(
+    Track track,
+    PlaybackData playbackData,
+  ) async {
+    final currentSource = await _streamingAudioSourceForTrack(
+      track,
+      playbackData,
+      preferDirectStreamWithBackgroundPrecache: true,
+    );
+    return _singleTrackSourcePlan(currentSource, playbackData);
+  }
+
+  bool _isLoopbackCleartextError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('cleartext http traffic') &&
+        (message.contains('127.0.0.1') || message.contains('localhost'));
+  }
+
+  bool _isHostLookupError(Object error) {
+    if (error is! SocketException) return false;
+    final message = error.message.toLowerCase();
+    return message.contains('failed host lookup') ||
+        message.contains('no address associated with hostname');
+  }
+
+  void _schedulePrecacheAhead() {
+    if (_isPrecachingAhead) return;
+    if (kDebugMode) {
+      print(
+        'AudioPlayerService: Scheduling pre-cache ahead (index=$_currentIndex, queue=${_queue.length})',
+      );
+    }
+    unawaited(_precacheAheadTracks());
+  }
+
+  Future<void> _precacheAheadTracks() async {
+    if (_isPrecachingAhead) return;
+    if (_currentIndex < 0 || _queue.isEmpty) {
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Skipping pre-cache (index=$_currentIndex, queue=${_queue.length})',
+        );
+      }
+      return;
+    }
+
+    _isPrecachingAhead = true;
+    try {
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Pre-cache pass started from index $_currentIndex (queue=${_queue.length})',
+        );
+      }
+      final onWifi = await _isConnectedToWifi();
+      if (_streamCacheWifiOnly && !onWifi) {
+        if (kDebugMode) {
+          print('AudioPlayerService: Skipping pre-cache (not on Wi-Fi)');
+        }
+        return;
+      }
+
+      final start = _currentIndex + 1;
+      if (start >= _queue.length) {
+        if (kDebugMode) {
+          print('AudioPlayerService: No upcoming tracks to pre-cache');
+        }
+        return;
+      }
+      final maxConcurrent = _effectivePrecacheConcurrency();
+      final candidateLimit = min(kPrecacheAheadTrackCount, maxConcurrent);
+      final end = min(_queue.length, start + candidateLimit);
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Pre-cache candidates ${end - start} tracks ($start..${end - 1}, limit=$candidateLimit)',
+        );
+      }
+
+      final candidates = <({Track track, PlaybackData playbackData})>[];
+      for (int i = start; i < end; i++) {
+        final track = _queue[i];
+        if (_precacheInProgress.contains(track.id)) continue;
+
+        if (track.localFilePath != null &&
+            await File(track.localFilePath!).exists()) {
+          if (kDebugMode) {
+            print(
+              'AudioPlayerService: Skipping pre-cache for ${track.id} (local file)',
+            );
+          }
+          continue;
+        }
+
+        if (kDebugMode) {
+          print('AudioPlayerService: Pre-cache candidate ${track.id}');
+        }
+
+        final result = await _ytPlayerUtils.playerResponseForPlayback(
+          track.id,
+          quality: _audioQuality,
+          isMetered: false,
+        );
+        if (!result.isSuccess || result.data == null) continue;
+        candidates.add((track: track, playbackData: result.data!));
+      }
+
+      if (candidates.isEmpty) {
+        if (kDebugMode) {
+          print('AudioPlayerService: No valid tracks resolved for pre-cache');
+        }
+        return;
+      }
+
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Pre-cache download workers=$maxConcurrent (wifiOnly=$_streamCacheWifiOnly, onWifi=$onWifi, jobs=${candidates.length})',
+        );
+      }
+
+      if (maxConcurrent <= 1 || candidates.length == 1) {
+        for (final candidate in candidates) {
+          await _precacheTrackAudioBytes(
+            candidate.track,
+            candidate.playbackData,
+          );
+          await _enforceAudioCacheLimit();
+        }
+        return;
+      }
+
+      int cursor = 0;
+      Future<void> worker(int workerId) async {
+        while (true) {
+          if (cursor >= candidates.length) return;
+          final next = candidates[cursor++];
+          if (kDebugMode) {
+            print(
+              'AudioPlayerService: Pre-cache worker#$workerId downloading ${next.track.id}',
+            );
+          }
+          await _precacheTrackAudioBytes(next.track, next.playbackData);
+          await _enforceAudioCacheLimit();
+        }
+      }
+
+      final workerCount = min(maxConcurrent, candidates.length);
+      await Future.wait(
+        List.generate(workerCount, (index) => worker(index + 1)),
+      );
+    } finally {
+      _isPrecachingAhead = false;
+    }
+  }
+
+  Future<void> _precacheTrackAudioBytes(
+    Track track,
+    PlaybackData playbackData, {
+    bool allowDnsRetry = true,
+  }) async {
+    if (kIsWeb) return;
+    if (_precacheInProgress.contains(track.id)) return;
+
+    final cacheFile = await _cacheFileForTrack(track, playbackData);
+    if (await cacheFile.exists()) {
+      final existingSize = await cacheFile.length();
+      if (existingSize >= kMinValidStreamCacheFileBytes) {
+        _stopLiveCacheProgressLogger(cacheFile.path);
+        final expectedBytes = playbackData.format.contentLength;
+        if (kDebugMode) {
+          if (expectedBytes != null && expectedBytes > 0) {
+            final progress = ((existingSize / expectedBytes) * 100).clamp(
+              0.0,
+              100.0,
+            );
+            print(
+              'AudioPlayerService: Pre-cache skipped, already cached ${track.id} '
+              '(${_formatBytes(existingSize)} / ${_formatBytes(expectedBytes)}, ${progress.toStringAsFixed(1)}%)',
+            );
+          } else {
+            print(
+              'AudioPlayerService: Pre-cache skipped, already cached ${track.id} '
+              '(${_formatBytes(existingSize)})',
+            );
+          }
+        }
+        await _touchCacheFile(cacheFile);
+        return;
+      }
+      await _deleteAudioCacheArtifact(cacheFile);
+    }
+
+    await _acquirePrecacheSlot();
+    bool slotAcquired = true;
+    if (_precacheInProgress.contains(track.id)) {
+      _releasePrecacheSlot();
+      slotAcquired = false;
+      return;
+    }
+
+    _precacheInProgress.add(track.id);
+    final tempFile = File('${cacheFile.path}.precache.part');
+    HttpClient? client;
+    IOSink? sink;
+    int downloadedBytes = 0;
+    try {
+      client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
+      final request = await client.getUrl(Uri.parse(playbackData.streamUrl));
+      _applyPrecacheRequestHeaders(request);
+      HttpClientResponse response = await request.close();
+      if (response.statusCode != 200 && response.statusCode != 206) {
+        throw HttpException('HTTP ${response.statusCode}');
+      }
+      final responseContentLength = response.contentLength;
+      int? expectedBytes = responseContentLength > 0
+          ? responseContentLength
+          : playbackData.format.contentLength;
+
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+
+      bool usedParallelDownload = false;
+      if (expectedBytes != null && expectedBytes >= kParallelPrecacheMinBytes) {
+        client.close(force: true);
+        client = null;
+        final parallelBytes = await _downloadWithParallelRanges(
+          track: track,
+          streamUri: Uri.parse(playbackData.streamUrl),
+          tempFile: tempFile,
+          expectedBytes: expectedBytes,
+        );
+        if (parallelBytes != null) {
+          downloadedBytes = parallelBytes;
+          usedParallelDownload = true;
+        } else {
+          client = HttpClient()
+            ..connectionTimeout = const Duration(seconds: 20);
+          final fallbackRequest = await client.getUrl(
+            Uri.parse(playbackData.streamUrl),
+          );
+          _applyPrecacheRequestHeaders(fallbackRequest);
+          response = await fallbackRequest.close();
+          if (response.statusCode != 200 && response.statusCode != 206) {
+            throw HttpException('HTTP ${response.statusCode}');
+          }
+          if (response.contentLength > 0) {
+            expectedBytes = response.contentLength;
+          }
+        }
+      }
+
+      if (!usedParallelDownload) {
+        sink = tempFile.openWrite(mode: FileMode.writeOnly);
+
+        int nextProgressLogPercent = 10;
+        int nextProgressLogBytes = 2 * 1024 * 1024;
+        final downloadTimer = Stopwatch()..start();
+        int speedSampleBytes = 0;
+        int speedSampleMs = 0;
+
+        String sampleSpeed() {
+          final nowMs = downloadTimer.elapsedMilliseconds;
+          final elapsedMs = max(1, nowMs - speedSampleMs);
+          final deltaBytes = max(0, downloadedBytes - speedSampleBytes);
+          speedSampleBytes = downloadedBytes;
+          speedSampleMs = nowMs;
+          return _formatTransferRate(deltaBytes * 1000 / elapsedMs);
+        }
+
+        if (kDebugMode) {
+          if (expectedBytes != null && expectedBytes > 0) {
+            print(
+              'AudioPlayerService: Pre-cache started for ${track.id} '
+              '(target ${_formatBytes(expectedBytes)})',
+            );
+          } else {
+            print('AudioPlayerService: Pre-cache started for ${track.id}');
+          }
+        }
+
+        await for (final chunk in response) {
+          sink.add(chunk);
+          downloadedBytes += chunk.length;
+          if (kDebugMode) {
+            if (expectedBytes != null && expectedBytes > 0) {
+              final progress = ((downloadedBytes / expectedBytes) * 100).clamp(
+                0.0,
+                100.0,
+              );
+              if (progress >= nextProgressLogPercent) {
+                final speed = sampleSpeed();
+                print(
+                  'AudioPlayerService: Pre-cache progress ${track.id} '
+                  '${progress.toStringAsFixed(1)}% '
+                  '(${_formatBytes(downloadedBytes)} / ${_formatBytes(expectedBytes)} @ $speed)',
+                );
+                while (progress >= nextProgressLogPercent) {
+                  nextProgressLogPercent += 10;
+                }
+              }
+            } else if (downloadedBytes >= nextProgressLogBytes) {
+              final speed = sampleSpeed();
+              print(
+                'AudioPlayerService: Pre-cache progress ${track.id} '
+                '${_formatBytes(downloadedBytes)} (total size unknown @ $speed)',
+              );
+              nextProgressLogBytes += 2 * 1024 * 1024;
+            }
+          }
+        }
+        await sink.flush();
+        await sink.close();
+        sink = null;
+      }
+
+      if (downloadedBytes < kMinValidStreamCacheFileBytes) {
+        throw const FormatException('Pre-cache file too small');
+      }
+
+      if (await cacheFile.exists()) {
+        await cacheFile.delete();
+      }
+      await tempFile.rename(cacheFile.path);
+      await _touchCacheFile(cacheFile);
+      _stopLiveCacheProgressLogger(cacheFile.path);
+      if (kDebugMode) {
+        if (expectedBytes != null && expectedBytes > 0) {
+          final progress = ((downloadedBytes / expectedBytes) * 100).clamp(
+            0.0,
+            100.0,
+          );
+          print(
+            'AudioPlayerService: Pre-cached ${track.id} '
+            '(${_formatBytes(downloadedBytes)} / ${_formatBytes(expectedBytes)}, ${progress.toStringAsFixed(1)}%)',
+          );
+        } else {
+          print(
+            'AudioPlayerService: Pre-cached ${track.id} (${_formatBytes(downloadedBytes)})',
+          );
+        }
+      }
+    } catch (e) {
+      if (allowDnsRetry && _isHostLookupError(e)) {
+        if (kDebugMode) {
+          print(
+            'AudioPlayerService: DNS lookup failed for ${track.id}, refreshing URL and retrying pre-cache once',
+          );
+        }
+
+        // Cached stream URL can become unreachable after network/DNS changes.
+        _ytPlayerUtils.clearCache(track.id);
+        final refreshed = await _ytPlayerUtils.playerResponseForPlayback(
+          track.id,
+          quality: _audioQuality,
+          isMetered: false,
+        );
+
+        if (refreshed.isSuccess && refreshed.data != null) {
+          _precacheInProgress.remove(track.id);
+          await _precacheTrackAudioBytes(
+            track,
+            refreshed.data!,
+            allowDnsRetry: false,
+          );
+          return;
+        }
+      }
+
+      if (kDebugMode) {
+        print('AudioPlayerService: Failed to pre-cache ${track.id}: $e');
+      }
+      if (sink != null) {
+        await sink.close();
+      }
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+    } finally {
+      client?.close(force: true);
+      _precacheInProgress.remove(track.id);
+      if (slotAcquired) {
+        _releasePrecacheSlot();
+      }
+    }
+  }
+
+  Future<void> _clearTrackAudioCache(String trackId) async {
+    if (kIsWeb) return;
+    try {
+      final cacheDir = await _getStreamAudioCacheDir(create: false);
+      if (!await cacheDir.exists()) return;
+      final safeTrackId = _sanitizeCacheKey(trackId);
+
+      await for (final entity in cacheDir.list(followLinks: false)) {
+        if (entity is! File) continue;
+        final fileName = entity.path.split(RegExp(r'[\\/]')).last;
+        if (fileName.startsWith('${safeTrackId}_')) {
+          await _deleteAudioCacheArtifact(entity);
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('AudioPlayerService: Failed to clear track audio cache: $e');
+      }
+    }
+  }
+
+  Future<void> _clearAllAudioCache() async {
+    if (kIsWeb) return;
+    try {
+      _stopAllLiveCacheProgressLoggers();
+      final cacheDir = await _getStreamAudioCacheDir(create: false);
+      if (await cacheDir.exists()) {
+        await cacheDir.delete(recursive: true);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('AudioPlayerService: Failed to clear audio cache directory: $e');
       }
     }
   }
@@ -388,83 +1881,123 @@ class AudioPlayerService {
   /// Current audio quality setting
   AudioQuality get audioQuality => _audioQuality;
 
-  void _init() {
-    // Listen to player state changes
-    _player.playerStateStream.listen((playerState) {
+  void _bindPlayerEventStreams(AudioPlayer player) {
+    player.playerStateStream.listen((playerState) {
+      if (!identical(player, _player)) return;
       _updateState(
         isPlaying: playerState.playing,
         isBuffering: playerState.processingState == ProcessingState.buffering,
         isLoading: playerState.processingState == ProcessingState.loading,
       );
 
-      // Auto-play next track when current one completes
+      // Auto-play next track when current one completes.
       if (playerState.processingState == ProcessingState.completed) {
         _onTrackComplete();
       }
     });
 
-    // Listen to position changes - THROTTLED to avoid UI jank
-    _player.positionStream.listen((position) {
-      // Avoid overwriting restored position while idle (keeps mini player correct)
-      if (_player.processingState == ProcessingState.idle &&
+    player.currentIndexStream.listen((playerIndex) {
+      if (!identical(player, _player)) return;
+      if (playerIndex == null) return;
+      if (playerIndex < 0 || playerIndex >= _activeSourceQueueIndices.length) {
+        return;
+      }
+
+      final queueIndex = _activeSourceQueueIndices[playerIndex];
+      if (queueIndex < 0 || queueIndex >= _queue.length) return;
+      if (queueIndex == _currentIndex) return;
+
+      _currentIndex = queueIndex;
+      _currentTrack = _queue[queueIndex];
+      final playbackData = _activeSourcePlaybackDataByQueueIndex[queueIndex];
+      if (playbackData != null) {
+        _currentPlaybackData = playbackData;
+      }
+
+      _updateState(
+        currentTrack: _currentTrack,
+        currentIndex: _currentIndex,
+        currentPlaybackData: playbackData ?? _currentPlaybackData,
+        isLoading: false,
+      );
+      _saveQueueDebounced();
+      _prefetchNextTrack();
+      _scheduleLyricsPrefetchAroundCurrent();
+    });
+
+    player.positionStream.listen((position) {
+      if (!identical(player, _player)) return;
+
+      // Avoid overwriting restored position while idle.
+      if (player.processingState == ProcessingState.idle &&
           position == Duration.zero &&
           _pendingSeekPosition != null &&
           _pendingSeekTrackId == _currentTrack?.id) {
         return;
       }
 
-      // Always update the dedicated position stream (for progress bars)
       _positionController.add(position);
       _maybePersistPosition(position);
 
-      // Throttle full state updates to reduce rebuilds
       final now = DateTime.now();
       if (_lastPositionUpdate == null ||
           now.difference(_lastPositionUpdate!) >= _positionUpdateInterval) {
         _lastPositionUpdate = now;
-        // Only update position in state occasionally (for other uses)
         _updateState(position: position);
 
-        // Check if we need more radio tracks (every 500ms when playing)
         if (_isRadioMode && !_isFetchingRadio) {
           _checkAndFetchRadioTracks();
         }
       }
 
-      // Pre-fetch next track when nearing end (check only once)
       _prefetchNextTrackIfNeeded(position);
+      _maybeTriggerAutoCrossfade(position);
+      _recoverStuckVolumeIfNeeded();
     });
 
-    // Listen to buffered position changes - use separate stream
-    _player.bufferedPositionStream.listen((bufferedPosition) {
+    player.bufferedPositionStream.listen((bufferedPosition) {
+      if (!identical(player, _player)) return;
       _bufferedPositionController.add(bufferedPosition);
-      // Don't call _updateState here - too frequent
     });
 
-    // Listen to duration changes
-    _player.durationStream.listen((duration) {
+    player.durationStream.listen((duration) {
+      if (!identical(player, _player)) return;
       final didUpdateDuration =
           duration != null && _applyDurationToCurrentTrack(duration);
+      _crossfadeTriggeredForTrack = false;
       _updateState(
         duration: duration,
         currentTrack: _currentTrack,
         queue: _queue,
         queueRevision: didUpdateDuration ? _queueRevision : null,
       );
-      // Reset prefetch flag for new track
       _prefetchTriggered = false;
     });
 
-    // Listen to errors
-    _player.playbackEventStream.listen(
+    player.playbackEventStream.listen(
       (event) {},
       onError: (Object e, StackTrace st) {
+        if (!identical(player, _player)) return;
         if (kDebugMode) {
           print('AudioPlayerService: Playback error: $e');
         }
         _handlePlaybackError(e);
       },
     );
+  }
+
+  void _init() {
+    _player = _primaryPlayer;
+    unawaited(_player.setVolume(1.0));
+    unawaited(_applyCrossfadeDurationToPlayer());
+    _bindPlayerEventStreams(_primaryPlayer);
+    _bindPlayerEventStreams(_secondaryPlayer);
+
+    // Periodic cache maintenance for LRU limit enforcement.
+    _cacheMaintenanceTimer?.cancel();
+    _cacheMaintenanceTimer = Timer.periodic(_cacheMaintenanceInterval, (_) {
+      unawaited(_enforceAudioCacheLimit());
+    });
   }
 
   /// Pre-fetch the next track's stream URL for seamless playback
@@ -488,6 +2021,7 @@ class AudioPlayerService {
 
         // Fire and forget - just warm up the cache
         _ytPlayerUtils.prefetchNext(nextTrack.id, quality: _audioQuality);
+        _schedulePrecacheAhead();
       }
     }
   }
@@ -498,9 +2032,25 @@ class AudioPlayerService {
       print('AudioPlayerService: Handling error: $error');
     }
 
+    // If Android blocks local proxy cleartext, disable proxy-based caching and
+    // retry current track using direct stream.
+    if (_isLoopbackCleartextError(error) &&
+        _allowProxyCachingSource &&
+        _currentTrack != null) {
+      _allowProxyCachingSource = false;
+      if (kDebugMode) {
+        print(
+          'AudioPlayerService: Disabling proxy caching due to cleartext policy and retrying track',
+        );
+      }
+      unawaited(_loadAndPlayCurrent());
+      return;
+    }
+
     // Clear cache for current track and retry once
     if (_currentTrack != null) {
       _ytPlayerUtils.clearCache(_currentTrack!.id);
+      unawaited(_clearTrackAudioCache(_currentTrack!.id));
 
       // Could implement retry logic here
       _updateState(error: 'Playback error: ${error.toString()}');
@@ -585,6 +2135,10 @@ class AudioPlayerService {
     String? queueSourceId,
     bool? isRadioMode,
     bool? isFetchingRadio,
+    bool? streamCacheWifiOnly,
+    int? streamCacheSizeLimitMb,
+    int? streamCacheMaxConcurrent,
+    int? crossfadeDurationMs,
   }) {
     final newState = _stateController.value.copyWith(
       currentTrack: currentTrack ?? _currentTrack,
@@ -606,6 +2160,11 @@ class AudioPlayerService {
       queueSourceId: queueSourceId ?? _queueSourceId,
       isRadioMode: isRadioMode ?? _isRadioMode,
       isFetchingRadio: isFetchingRadio ?? _isFetchingRadio,
+      streamCacheWifiOnly: streamCacheWifiOnly ?? _streamCacheWifiOnly,
+      streamCacheSizeLimitMb: streamCacheSizeLimitMb ?? _streamCacheSizeLimitMb,
+      streamCacheMaxConcurrent:
+          streamCacheMaxConcurrent ?? _streamCacheMaxConcurrent,
+      crossfadeDurationMs: crossfadeDurationMs ?? _crossfadeDurationMs,
     );
 
     // Only emit if state actually changed (using == that excludes position)
@@ -687,6 +2246,7 @@ class AudioPlayerService {
 
     // Persist queue state (debounced)
     _saveQueueDebounced();
+    _scheduleLyricsPrefetchAroundCurrent();
 
     // Fire and forget - start playback without blocking caller
     // This allows UI to remain responsive while audio loads
@@ -741,6 +2301,33 @@ class AudioPlayerService {
     _ytPlayerUtils.prefetch(allIds, quality: _audioQuality);
   }
 
+  void _scheduleLyricsPrefetchAroundCurrent() {
+    if (_queue.isEmpty) return;
+    final start = _currentIndex < 0 ? 0 : _currentIndex;
+    final end = min(_queue.length, start + kLyricsPrefetchAheadTrackCount);
+    if (start >= end) return;
+
+    final tracks = _queue.sublist(start, end);
+    if (kDebugMode) {
+      print(
+        'AudioPlayerService: Prefetching lyrics for ${tracks.length} tracks (from index $start)',
+      );
+    }
+    unawaited(_prefetchLyricsForTracks(tracks));
+  }
+
+  Future<void> _prefetchLyricsForTracks(List<Track> tracks) async {
+    for (final track in tracks) {
+      await _lyricsWarmupService.prefetchForTrack(
+        videoId: track.id,
+        title: track.title,
+        artist: track.artist,
+        album: track.album,
+        durationSeconds: track.duration.inSeconds,
+      );
+    }
+  }
+
   /// Build ConcatenatingAudioSource in background for gapless playback
   /// This is called AFTER current track starts playing
   Future<void> _buildPlaylistInBackground() async {
@@ -780,7 +2367,7 @@ class AudioPlayerService {
           final currentData = _currentPlaybackData;
           if (currentData != null) {
             sources.add(
-              AudioSource.uri(Uri.parse(currentData.streamUrl), tag: track),
+              await _streamingAudioSourceForTrack(track, currentData),
             );
             _playlistIndexMap[track.id] = i;
           } else if (track.localFilePath != null) {
@@ -811,9 +2398,7 @@ class AudioPlayerService {
         );
 
         if (result.isSuccess) {
-          sources.add(
-            AudioSource.uri(Uri.parse(result.data!.streamUrl), tag: track),
-          );
+          sources.add(await _streamingAudioSourceForTrack(track, result.data!));
           _playlistIndexMap[track.id] = sources.length - 1;
         }
       }
@@ -849,6 +2434,8 @@ class AudioPlayerService {
         tracks.map((t) => t.id).toList(),
         quality: _audioQuality,
       );
+      _schedulePrecacheAhead();
+      _scheduleLyricsPrefetchAroundCurrent();
     }
   }
 
@@ -867,6 +2454,8 @@ class AudioPlayerService {
 
     // Prefetch the track that will play next
     _ytPlayerUtils.prefetchNext(track.id, quality: _audioQuality);
+    _schedulePrecacheAhead();
+    _scheduleLyricsPrefetchAroundCurrent();
   }
 
   /// Remove track from queue
@@ -935,7 +2524,7 @@ class AudioPlayerService {
 
     _currentIndex = index;
     _currentTrack = _queue[index];
-    _loadAndPlayCurrent();
+    unawaited(_loadAndPlayCurrent());
   }
 
   /// Clear the queue
@@ -947,6 +2536,10 @@ class AudioPlayerService {
     _currentPlaybackData = null;
     _playlist = null;
     _playlistIndexMap.clear();
+    _activeSourceQueueIndices = const [];
+    _activeSourcePlaybackDataByQueueIndex = const <int, PlaybackData>{};
+    _isCrossfading = false;
+    _crossfadeTriggeredForTrack = false;
     stop();
     _queueRevision++;
     _updateState(
@@ -969,7 +2562,9 @@ class AudioPlayerService {
   Future<void> _loadAndPlayCurrent() async {
     if (_currentIndex < 0 || _currentIndex >= _queue.length) return;
 
+    _crossfadeTriggeredForTrack = false;
     _currentTrack = _queue[_currentIndex];
+    final trackForLyrics = _currentTrack!;
     _currentPlaybackData = null;
     if (_pendingSeekTrackId != null &&
         _pendingSeekTrackId != _currentTrack!.id) {
@@ -986,9 +2581,22 @@ class AudioPlayerService {
       currentPlaybackData: null,
     );
 
+    // Warm lyrics cache immediately when track changes.
+    unawaited(
+      _lyricsWarmupService.prefetchForTrack(
+        videoId: trackForLyrics.id,
+        title: trackForLyrics.title,
+        artist: trackForLyrics.artist,
+        album: trackForLyrics.album,
+        durationSeconds: trackForLyrics.duration.inSeconds,
+      ),
+    );
+
     try {
       final trackId = _currentTrack!.id;
       final stopwatch = Stopwatch()..start();
+      await _inactivePlayer.stop();
+      await _player.setVolume(1.0);
 
       if (kDebugMode) {
         print(
@@ -1011,7 +2619,7 @@ class AudioPlayerService {
           if (fileSize < 10000) {
             if (kDebugMode) {
               print(
-                'AudioPlayerService: Local file too small (${fileSize} bytes), likely corrupted. Falling back to stream.',
+                'AudioPlayerService: Local file too small ($fileSize bytes), likely corrupted. Falling back to stream.',
               );
             }
           } else {
@@ -1025,6 +2633,9 @@ class AudioPlayerService {
               await _player.setAudioSource(
                 AudioSource.uri(fileUri, tag: _currentTrack),
               );
+              _activeSourceQueueIndices = <int>[_currentIndex];
+              _activeSourcePlaybackDataByQueueIndex =
+                  const <int, PlaybackData>{};
               if (_pendingSeekPosition != null &&
                   _pendingSeekTrackId == _currentTrack!.id) {
                 await _player.seek(_pendingSeekPosition);
@@ -1035,6 +2646,7 @@ class AudioPlayerService {
               }
               _player.play();
               _updateState(isLoading: false);
+              _prefetchNextTrack();
               return;
             } catch (e) {
               if (kDebugMode) {
@@ -1107,12 +2719,53 @@ class AudioPlayerService {
       // Set URL and start playback
       // Note: setAudioSource does HTTP buffering - this is the main delay
       stopwatch.reset();
-
-      await _player.setAudioSource(
-        AudioSource.uri(Uri.parse(playbackData.streamUrl), tag: _currentTrack),
-        // Pre-buffer ahead for smoother playback
-        preload: true,
+      final sourcePlan = await _buildPlaybackSourcePlanForCurrentTrack(
+        _currentTrack!,
+        playbackData,
       );
+      final source = sourcePlan.source;
+      _activeSourceQueueIndices = sourcePlan.queueIndices;
+      _activeSourcePlaybackDataByQueueIndex =
+          sourcePlan.playbackDataByQueueIndex;
+
+      try {
+        if (source is ConcatenatingAudioSource) {
+          await _player.setAudioSource(
+            source,
+            // Pre-buffer ahead for smoother playback
+            preload: true,
+            initialIndex: 0,
+          );
+        } else {
+          await _player.setAudioSource(
+            source,
+            // Pre-buffer ahead for smoother playback
+            preload: true,
+          );
+        }
+      } catch (e) {
+        if (source is LockCachingAudioSource && _isLoopbackCleartextError(e)) {
+          if (kDebugMode) {
+            print(
+              'AudioPlayerService: Local proxy blocked by cleartext policy, falling back to direct stream',
+            );
+          }
+          _allowProxyCachingSource = false;
+          _activeSourceQueueIndices = <int>[_currentIndex];
+          _activeSourcePlaybackDataByQueueIndex = <int, PlaybackData>{
+            _currentIndex: playbackData,
+          };
+          await _player.setAudioSource(
+            AudioSource.uri(
+              Uri.parse(playbackData.streamUrl),
+              tag: _currentTrack,
+            ),
+            preload: true,
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       if (_pendingSeekPosition != null &&
           _pendingSeekTrackId == _currentTrack!.id) {
@@ -1140,7 +2793,9 @@ class AudioPlayerService {
 
       // Prefetch next track while current plays
       _prefetchNextTrack();
+      unawaited(_enforceAudioCacheLimit());
     } catch (e) {
+      unawaited(_player.setVolume(1.0));
       if (kDebugMode) {
         print('AudioPlayerService: Error: $e');
       }
@@ -1159,6 +2814,16 @@ class AudioPlayerService {
 
       // Fire and forget - don't await
       _ytPlayerUtils.prefetchNext(nextTrack.id, quality: _audioQuality);
+      _schedulePrecacheAhead();
+      unawaited(
+        _lyricsWarmupService.prefetchForTrack(
+          videoId: nextTrack.id,
+          title: nextTrack.title,
+          artist: nextTrack.artist,
+          album: nextTrack.album,
+          durationSeconds: nextTrack.duration.inSeconds,
+        ),
+      );
     }
   }
 
@@ -1316,6 +2981,8 @@ class AudioPlayerService {
             newTracks.map((t) => t.id).toList(),
             quality: _audioQuality,
           );
+          _schedulePrecacheAhead();
+          _scheduleLyricsPrefetchAroundCurrent();
 
           // Update radio source for next fetch - use track from new batch
           if (newTracks.length > 2) {
@@ -1387,6 +3054,7 @@ class AudioPlayerService {
   /// Pause
   Future<void> pause() async {
     await _player.pause();
+    await _inactivePlayer.pause();
     _persistQueueNow(position: _player.position);
   }
 
@@ -1404,6 +3072,13 @@ class AudioPlayerService {
     final position = _player.position;
     _persistQueueNow(position: position);
     await _player.stop();
+    await _inactivePlayer.stop();
+    _activeSourceQueueIndices = const [];
+    _activeSourcePlaybackDataByQueueIndex = const <int, PlaybackData>{};
+    _isCrossfading = false;
+    _crossfadeTriggeredForTrack = false;
+    await _player.setVolume(1.0);
+    await _inactivePlayer.setVolume(1.0);
   }
 
   /// Seek to position
@@ -1446,34 +3121,7 @@ class AudioPlayerService {
     }
 
     _currentIndex = newIndex;
-
-    // If playlist is ready and has the track, use it for instant skip
-    // This avoids calling setAudioSource() which requires HTTP buffering
-    if (_playlist != null &&
-        _playlistIndexMap.containsKey(_queue[newIndex].id)) {
-      final playlistIndex = _playlistIndexMap[_queue[newIndex].id]!;
-      if (kDebugMode) {
-        print(
-          'AudioPlayerService: Instant skip using playlist (index $playlistIndex)',
-        );
-      }
-
-      // Update state immediately
-      _currentTrack = _queue[newIndex];
-      _updateState(
-        currentTrack: _currentTrack,
-        currentIndex: _currentIndex,
-        isLoading: false,
-      );
-
-      // Seek to the track in the concatenating source
-      // Note: This requires the playlist to be set as the audio source
-      // For now, fall back to _loadAndPlayCurrent
-      await _loadAndPlayCurrent();
-    } else {
-      // Fall back to regular loading
-      await _loadAndPlayCurrent();
-    }
+    await _loadAndPlayCurrent();
   }
 
   /// Skip to previous track
@@ -1486,21 +3134,24 @@ class AudioPlayerService {
       return;
     }
 
+    int newIndex;
     if (_currentIndex > 0) {
-      _currentIndex--;
+      newIndex = _currentIndex - 1;
     } else if (_player.loopMode == LoopMode.all) {
-      _currentIndex = _queue.length - 1;
+      newIndex = _queue.length - 1;
     } else {
       await seek(Duration.zero);
       return;
     }
 
+    _currentIndex = newIndex;
     await _loadAndPlayCurrent();
   }
 
   /// Set loop mode
   Future<void> setLoopMode(LoopMode mode) async {
     await _player.setLoopMode(mode);
+    await _inactivePlayer.setLoopMode(mode);
     _updateState(loopMode: mode);
   }
 
@@ -1545,6 +3196,7 @@ class AudioPlayerService {
   /// Set playback speed
   Future<void> setSpeed(double speed) async {
     await _player.setSpeed(speed);
+    await _inactivePlayer.setSpeed(speed);
     _updateState(speed: speed);
   }
 
@@ -1558,6 +3210,8 @@ class AudioPlayerService {
 
     // Clear cache to force new quality on next track
     _ytPlayerUtils.clearAllCache();
+    unawaited(_clearAllAudioCache());
+    _schedulePrecacheAhead();
   }
 
   /// Shuffle a list, optionally keeping an item at index 0
@@ -1612,8 +3266,7 @@ class AudioPlayerService {
         final hasRestoredDuration =
             restoredDuration != null && restoredDuration > Duration.zero;
         _lastPositionPersisted = restoredPosition;
-        if (restoredPosition > Duration.zero &&
-            _currentTrack != null) {
+        if (restoredPosition > Duration.zero && _currentTrack != null) {
           _pendingSeekPosition = restoredPosition;
           _pendingSeekTrackId = _currentTrack!.id;
           _positionController.add(restoredPosition);
@@ -1649,10 +3302,7 @@ class AudioPlayerService {
     return _player.position;
   }
 
-  void _persistQueueNow({
-    Duration? position,
-    bool log = false,
-  }) {
+  void _persistQueueNow({Duration? position, bool log = false}) {
     if (_queue.isEmpty || _currentIndex < 0) return;
     final resolvedPosition = _resolvePersistPosition(position);
     _lastPositionPersisted = resolvedPosition;
@@ -1665,7 +3315,7 @@ class AudioPlayerService {
       ),
     );
     if (log && kDebugMode) {
-      print(
+      debugPrint(
         'AudioPlayerService: Queue persisted (${_queue.length} tracks, index $_currentIndex)',
       );
     }
@@ -1699,8 +3349,17 @@ class AudioPlayerService {
   /// Dispose resources
   void dispose() {
     _persistenceDebounceTimer?.cancel();
+    _cacheMaintenanceTimer?.cancel();
+    _stopAllLiveCacheProgressLoggers();
+    while (_precacheSlotWaiters.isNotEmpty) {
+      final waiter = _precacheSlotWaiters.removeFirst();
+      if (!waiter.isCompleted) {
+        waiter.complete();
+      }
+    }
     _persistQueueNow(position: _player.position);
-    _player.dispose();
+    _primaryPlayer.dispose();
+    _secondaryPlayer.dispose();
     _stateController.close();
     _positionController.close();
     _bufferedPositionController.close();

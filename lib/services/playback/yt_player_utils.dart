@@ -49,12 +49,16 @@ class YTPlayerUtils {
         .then((_) {
           _poTokensInitialized = true;
           _poTokenInitCompleter?.complete();
-          if (kDebugMode) {print('YTPlayerUtils: poTokens initialized from cache');}
+          if (kDebugMode) {
+            print('YTPlayerUtils: poTokens initialized from cache');
+          }
         })
         .catchError((e) {
           _poTokensInitialized = true;
           _poTokenInitCompleter?.complete();
-          if (kDebugMode) {print('YTPlayerUtils: poToken cache load failed: $e');}
+          if (kDebugMode) {
+            print('YTPlayerUtils: poToken cache load failed: $e');
+          }
         });
   }
 
@@ -103,7 +107,9 @@ class YTPlayerUtils {
         );
       }
     } catch (e) {
-      if (kDebugMode) {print('YTPlayerUtils: Persistent cache load error: $e');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: Persistent cache load error: $e');
+      }
     }
     return null;
   }
@@ -122,9 +128,13 @@ class YTPlayerUtils {
         codec: data.format.codecs,
       );
       HiveService.streamCacheBox.put(videoId, entity);
-      if (kDebugMode) {print('YTPlayerUtils: Saved stream to persistent cache');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: Saved stream to persistent cache');
+      }
     } catch (e) {
-      if (kDebugMode) {print('YTPlayerUtils: Persistent cache save error: $e');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: Persistent cache save error: $e');
+      }
     }
   }
 
@@ -143,23 +153,38 @@ class YTPlayerUtils {
     AudioQuality quality = AudioQuality.auto,
     bool isMetered = false,
   }) async {
-    if (kDebugMode) {print('YTPlayerUtils: Getting playback for $videoId');}
+    if (kDebugMode) {
+      print('YTPlayerUtils: Getting playback for $videoId');
+    }
 
     // Check in-memory cache first
     final cached = _cache[videoId];
     if (cached != null && cached.isValid) {
+      final normalized = _normalizePlaybackData(cached);
+      if (!identical(normalized, cached)) {
+        _cache[videoId] = normalized;
+        _saveToPersistentCache(videoId, normalized);
+      }
       CacheAnalytics.instance.recordCacheHit();
-      if (kDebugMode) {print('YTPlayerUtils: Using cached playback data (memory)');}
-      return PlaybackResult.success(cached);
+      if (kDebugMode) {
+        print('YTPlayerUtils: Using cached playback data (memory)');
+      }
+      return PlaybackResult.success(normalized);
     }
 
     // Check persistent cache (Hive)
     final persistedData = _loadFromPersistentCache(videoId);
     if (persistedData != null) {
+      final normalized = _normalizePlaybackData(persistedData);
       CacheAnalytics.instance.recordCacheHit();
-      _cache[videoId] = persistedData; // Also add to memory cache
-      if (kDebugMode) {print('YTPlayerUtils: Using cached playback data (disk)');}
-      return PlaybackResult.success(persistedData);
+      _cache[videoId] = normalized; // Also add to memory cache
+      if (!identical(normalized, persistedData)) {
+        _saveToPersistentCache(videoId, normalized);
+      }
+      if (kDebugMode) {
+        print('YTPlayerUtils: Using cached playback data (disk)');
+      }
+      return PlaybackResult.success(normalized);
     }
 
     CacheAnalytics.instance.recordCacheMiss();
@@ -175,16 +200,22 @@ class YTPlayerUtils {
     String? visitorData;
 
     if (!_poToken.hasValidTokens) {
-      if (kDebugMode) {print('YTPlayerUtils: Generating poToken upfront...');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: Generating poToken upfront...');
+      }
       final tokenGenerated = await _poToken.generateTokens();
       if (tokenGenerated) {
         streamingPoToken = _poToken.streamingPoToken;
         visitorData = _poToken.visitorData;
-        if (kDebugMode) {print(
-          'YTPlayerUtils: poToken ready, visitorData: ${visitorData?.substring(0, min(20, visitorData.length))}...',
-        );}
+        if (kDebugMode) {
+          print(
+            'YTPlayerUtils: poToken ready, visitorData: ${visitorData?.substring(0, min(20, visitorData.length))}...',
+          );
+        }
       } else {
-        if (kDebugMode) {print('YTPlayerUtils: poToken generation failed, proceeding without');}
+        if (kDebugMode) {
+          print('YTPlayerUtils: poToken generation failed, proceeding without');
+        }
       }
     } else {
       streamingPoToken = _poToken.streamingPoToken;
@@ -199,9 +230,11 @@ class YTPlayerUtils {
       // Check if client should be skipped due to too many failures
       final failures = _clientFailures[client.name] ?? 0;
       if (failures >= _maxConsecutiveFailures) {
-        if (kDebugMode) {print(
-          'YTPlayerUtils: Skipping ${client.name} due to $failures consecutive failures',
-        );}
+        if (kDebugMode) {
+          print(
+            'YTPlayerUtils: Skipping ${client.name} due to $failures consecutive failures',
+          );
+        }
         continue;
       }
 
@@ -211,13 +244,17 @@ class YTPlayerUtils {
       // Apply backoff if there were previous failures
       if (failures > 0) {
         final backoffMs = _calculateBackoff(failures);
-        if (kDebugMode) {print(
-          'YTPlayerUtils: Applying ${backoffMs}ms backoff for ${client.name}',
-        );}
+        if (kDebugMode) {
+          print(
+            'YTPlayerUtils: Applying ${backoffMs}ms backoff for ${client.name}',
+          );
+        }
         await Future.delayed(Duration(milliseconds: backoffMs));
       }
 
-      if (kDebugMode) {print('YTPlayerUtils: Trying client ${client.name}...');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: Trying client ${client.name}...');
+      }
       _clientLastRequest[client.name] = DateTime.now();
 
       final result = await _tryClient(
@@ -246,9 +283,11 @@ class YTPlayerUtils {
       // If bot detection and we don't have valid tokens, try generating (but don't clear existing)
       // OuterTune: tokens are reused per session, not regenerated per track
       if (result.requiresPoToken && !_poToken.hasValidTokens) {
-        if (kDebugMode) {print(
-          'YTPlayerUtils: Bot detected, generating poToken (session-level)...',
-        );}
+        if (kDebugMode) {
+          print(
+            'YTPlayerUtils: Bot detected, generating poToken (session-level)...',
+          );
+        }
         final generated = await _poToken.generateTokens();
 
         if (generated) {
@@ -279,7 +318,9 @@ class YTPlayerUtils {
     }
 
     // All clients failed
-    if (kDebugMode) {print('YTPlayerUtils: All clients failed for $videoId');}
+    if (kDebugMode) {
+      print('YTPlayerUtils: All clients failed for $videoId');
+    }
     return lastError ?? PlaybackResult.failure('Could not get playback URL');
   }
 
@@ -289,9 +330,11 @@ class YTPlayerUtils {
     String videoId, {
     AudioQuality quality = AudioQuality.high,
   }) async {
-    if (kDebugMode) {print(
-      'YTPlayerUtils: Getting format for download: $videoId (preferring Opus)',
-    );}
+    if (kDebugMode) {
+      print(
+        'YTPlayerUtils: Getting format for download: $videoId (preferring Opus)',
+      );
+    }
 
     // Don't use cache for downloads - we need fresh URL
     await _ensurePoTokensInitialized();
@@ -324,14 +367,18 @@ class YTPlayerUtils {
         );
 
         if (response == null || !response.playabilityStatus.isPlayable) {
-          if (kDebugMode) {print('YTPlayerUtils: ${client.name} not playable for download');}
+          if (kDebugMode) {
+            print('YTPlayerUtils: ${client.name} not playable for download');
+          }
           continue;
         }
 
         final adaptiveFormats =
             response.streamingData?['adaptiveFormats'] as List?;
         if (adaptiveFormats == null || adaptiveFormats.isEmpty) {
-          if (kDebugMode) {print('YTPlayerUtils: No adaptive formats from ${client.name}');}
+          if (kDebugMode) {
+            print('YTPlayerUtils: No adaptive formats from ${client.name}');
+          }
           continue;
         }
 
@@ -340,14 +387,18 @@ class YTPlayerUtils {
 
         // Fallback to AAC if no Opus available
         if (formatData == null) {
-          if (kDebugMode) {print('YTPlayerUtils: No Opus format, falling back to AAC');}
+          if (kDebugMode) {
+            print('YTPlayerUtils: No Opus format, falling back to AAC');
+          }
           formatData = _selectAacFormat(adaptiveFormats, quality: quality);
         }
 
         if (formatData == null) {
-          if (kDebugMode) {print(
-            'YTPlayerUtils: No audio format found from ${client.name}, trying next client',
-          );}
+          if (kDebugMode) {
+            print(
+              'YTPlayerUtils: No audio format found from ${client.name}, trying next client',
+            );
+          }
           continue;
         }
 
@@ -361,9 +412,11 @@ class YTPlayerUtils {
         );
 
         if (streamUrl == null) {
-          if (kDebugMode) {print(
-            'YTPlayerUtils: Could not extract stream URL from ${client.name}',
-          );}
+          if (kDebugMode) {
+            print(
+              'YTPlayerUtils: Could not extract stream URL from ${client.name}',
+            );
+          }
           continue;
         }
 
@@ -373,9 +426,11 @@ class YTPlayerUtils {
           visitorData: visitorData,
         );
         if (!isValid) {
-          if (kDebugMode) {print(
-            'YTPlayerUtils: Stream URL validation failed for ${client.name}',
-          );}
+          if (kDebugMode) {
+            print(
+              'YTPlayerUtils: Stream URL validation failed for ${client.name}',
+            );
+          }
           continue;
         }
 
@@ -396,12 +451,16 @@ class YTPlayerUtils {
           fetchedAt: DateTime.now(),
         );
 
-        if (kDebugMode) {print(
-          'YTPlayerUtils: Got format for download: ${audioFormat.mimeType} at ${audioFormat.bitrate}bps',
-        );}
+        if (kDebugMode) {
+          print(
+            'YTPlayerUtils: Got format for download: ${audioFormat.mimeType} at ${audioFormat.bitrate}bps',
+          );
+        }
         return PlaybackResult.success(playbackData);
       } catch (e) {
-        if (kDebugMode) {print('YTPlayerUtils: Download format error with ${client.name}: $e');}
+        if (kDebugMode) {
+          print('YTPlayerUtils: Download format error with ${client.name}: $e');
+        }
       }
     }
 
@@ -431,11 +490,15 @@ class YTPlayerUtils {
         .toList();
 
     if (opusFormats.isEmpty) {
-      if (kDebugMode) {print('YTPlayerUtils: No Opus formats available');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: No Opus formats available');
+      }
       return null;
     }
 
-    if (kDebugMode) {print('YTPlayerUtils: Found ${opusFormats.length} Opus formats');}
+    if (kDebugMode) {
+      print('YTPlayerUtils: Found ${opusFormats.length} Opus formats');
+    }
 
     // Sort by bitrate based on quality preference
     double qualityFactor;
@@ -463,9 +526,11 @@ class YTPlayerUtils {
 
     final best = opusFormats.first;
     final format = best['format'] as AudioFormat;
-    if (kDebugMode) {print(
-      'YTPlayerUtils: Selected Opus: ${format.mimeType} at ${format.bitrate}bps',
-    );}
+    if (kDebugMode) {
+      print(
+        'YTPlayerUtils: Selected Opus: ${format.mimeType} at ${format.bitrate}bps',
+      );
+    }
 
     return best;
   }
@@ -493,11 +558,15 @@ class YTPlayerUtils {
         .toList();
 
     if (aacFormats.isEmpty) {
-      if (kDebugMode) {print('YTPlayerUtils: No AAC formats available');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: No AAC formats available');
+      }
       return null;
     }
 
-    if (kDebugMode) {print('YTPlayerUtils: Found ${aacFormats.length} AAC formats');}
+    if (kDebugMode) {
+      print('YTPlayerUtils: Found ${aacFormats.length} AAC formats');
+    }
 
     // Sort by bitrate based on quality preference
     double qualityFactor;
@@ -525,9 +594,11 @@ class YTPlayerUtils {
 
     final best = aacFormats.first;
     final format = best['format'] as AudioFormat;
-    if (kDebugMode) {print(
-      'YTPlayerUtils: Selected AAC: ${format.mimeType} at ${format.bitrate}bps',
-    );}
+    if (kDebugMode) {
+      print(
+        'YTPlayerUtils: Selected AAC: ${format.mimeType} at ${format.bitrate}bps',
+      );
+    }
 
     return best;
   }
@@ -587,7 +658,9 @@ class YTPlayerUtils {
       // Check playability
       if (!response.playabilityStatus.isPlayable) {
         final reason = response.playabilityStatus.reason ?? 'Unknown';
-        if (kDebugMode) {print('YTPlayerUtils: ${client.name} not playable: $reason');}
+        if (kDebugMode) {
+          print('YTPlayerUtils: ${client.name} not playable: $reason');
+        }
 
         // Check if it needs login/poToken (bot detection)
         if (response.playabilityStatus.requiresLogin ||
@@ -603,7 +676,9 @@ class YTPlayerUtils {
 
       // Check for streaming data
       if (!response.hasAdaptiveFormats) {
-        if (kDebugMode) {print('YTPlayerUtils: ${client.name} has no adaptive formats');}
+        if (kDebugMode) {
+          print('YTPlayerUtils: ${client.name} has no adaptive formats');
+        }
         return PlaybackResult.failure('No streaming data');
       }
 
@@ -638,9 +713,11 @@ class YTPlayerUtils {
         visitorData: visitorData,
       );
       if (!isValid) {
-        if (kDebugMode) {print(
-          'YTPlayerUtils: Stream URL validation failed (HEAD returned error)',
-        );}
+        if (kDebugMode) {
+          print(
+            'YTPlayerUtils: Stream URL validation failed (HEAD returned error)',
+          );
+        }
         return PlaybackResult.failure('Stream URL validation failed');
       }
 
@@ -660,10 +737,14 @@ class YTPlayerUtils {
         fetchedAt: DateTime.now(),
       );
 
-      if (kDebugMode) {print('YTPlayerUtils: Success from ${client.name}');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: Success from ${client.name}');
+      }
       return PlaybackResult.success(playbackData);
     } catch (e) {
-      if (kDebugMode) {print('YTPlayerUtils: ${client.name} error: $e');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: ${client.name} error: $e');
+      }
       return PlaybackResult.failure(e.toString());
     }
   }
@@ -691,11 +772,15 @@ class YTPlayerUtils {
         .toList();
 
     if (audioFormats.isEmpty) {
-      if (kDebugMode) {print('YTPlayerUtils: No audio-only formats found');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: No audio-only formats found');
+      }
       return null;
     }
 
-    if (kDebugMode) {print('YTPlayerUtils: Found ${audioFormats.length} audio formats');}
+    if (kDebugMode) {
+      print('YTPlayerUtils: Found ${audioFormats.length} audio formats');
+    }
 
     // Calculate quality factor for each format
     final qualityFactor = _getQualityFactor(quality, isMetered);
@@ -716,9 +801,11 @@ class YTPlayerUtils {
 
     // Return the best format with both parsed and raw data
     final best = audioFormats.first;
-    if (kDebugMode) {print(
-      'YTPlayerUtils: Selected ${(best['format'] as AudioFormat).mimeType} at ${(best['format'] as AudioFormat).bitrate}bps',
-    );}
+    if (kDebugMode) {
+      print(
+        'YTPlayerUtils: Selected ${(best['format'] as AudioFormat).mimeType} at ${(best['format'] as AudioFormat).bitrate}bps',
+      );
+    }
 
     return best;
   }
@@ -754,6 +841,7 @@ class YTPlayerUtils {
     // Try direct URL first (preferred)
     if (format['url'] != null) {
       String url = format['url'] as String;
+      url = _ensureRateBypass(url);
 
       // Append poToken if provided (OuterTune binds token to stream)
       if (poToken != null && poToken.isNotEmpty) {
@@ -770,6 +858,7 @@ class YTPlayerUtils {
 
       if (decrypted != null) {
         String url = decrypted;
+        url = _ensureRateBypass(url);
         if (poToken != null && poToken.isNotEmpty) {
           url += '&pot=$poToken';
         }
@@ -778,6 +867,43 @@ class YTPlayerUtils {
     }
 
     return null;
+  }
+
+  PlaybackData _normalizePlaybackData(PlaybackData input) {
+    final normalizedUrl = _ensureRateBypass(input.streamUrl);
+    if (normalizedUrl == input.streamUrl) {
+      return input;
+    }
+    if (kDebugMode) {
+      print('YTPlayerUtils: Normalized cached playback URL');
+    }
+    return PlaybackData(
+      audioConfig: input.audioConfig,
+      videoDetails: input.videoDetails,
+      playbackTracking: input.playbackTracking,
+      format: input.format,
+      streamUrl: normalizedUrl,
+      streamExpiresInSeconds: input.streamExpiresInSeconds,
+      fetchedAt: input.fetchedAt,
+    );
+  }
+
+  /// Force `ratebypass=yes` when possible to reduce YouTube CDN throttling.
+  String _ensureRateBypass(String url) {
+    final hasRateBypassYes = RegExp(
+      r'([?&])ratebypass=yes(?:&|$)',
+    ).hasMatch(url);
+    if (hasRateBypassYes) return url;
+
+    if (RegExp(r'([?&])ratebypass=').hasMatch(url)) {
+      return url.replaceFirst(
+        RegExp(r'([?&])ratebypass=[^&]*'),
+        r'$1ratebypass=yes',
+      );
+    }
+
+    final separator = url.contains('?') ? '&' : '?';
+    return '$url${separator}ratebypass=yes';
   }
 
   /// Decrypt signature cipher
@@ -789,7 +915,9 @@ class YTPlayerUtils {
       // Use the signature decryptor
       return await _signatureDecryptor.decrypt(cipher);
     } catch (e) {
-      if (kDebugMode) {print('YTPlayerUtils: Cipher decryption failed: $e');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: Cipher decryption failed: $e');
+      }
       return null;
     }
   }
@@ -818,18 +946,24 @@ class YTPlayerUtils {
   /// Clear cache for a specific video
   void clearCache(String videoId) {
     _cache.remove(videoId);
+    // Also clear persistent cache so retries don't keep reusing stale URLs.
+    unawaited(HiveService.streamCacheBox.delete(videoId));
   }
 
   /// Clear all cache
   void clearAllCache() {
     _cache.clear();
+    // Keep in-memory and disk cache behavior consistent.
+    unawaited(HiveService.streamCacheBox.clear());
   }
 
   /// Reset client failure counters (call after successful playback)
   void resetClientFailures() {
     _clientFailures.clear();
     _clientLastRequest.clear();
-    if (kDebugMode) {print('YTPlayerUtils: Client failures reset');}
+    if (kDebugMode) {
+      print('YTPlayerUtils: Client failures reset');
+    }
   }
 
   /// Get cache size
@@ -841,7 +975,15 @@ class YTPlayerUtils {
   /// Check if playback data is cached for a video
   bool hasCachedData(String videoId) {
     final cached = _cache[videoId];
-    return cached != null && cached.isValid;
+    if (cached != null && cached.isValid) return true;
+
+    // Include persistent cache so callers can reliably detect cache hits.
+    final persisted = _loadFromPersistentCache(videoId);
+    if (persisted != null) {
+      _cache[videoId] = persisted;
+      return true;
+    }
+    return false;
   }
 
   /// Prefetch playback data for multiple videos (OuterTune-style)
@@ -860,7 +1002,9 @@ class YTPlayerUtils {
   }) async {
     if (videoIds.isEmpty) return;
 
-    if (kDebugMode) {print('YTPlayerUtils: Prefetching ${videoIds.length} tracks...');}
+    if (kDebugMode) {
+      print('YTPlayerUtils: Prefetching ${videoIds.length} tracks...');
+    }
 
     // Schedule as a low-priority background task
     // This ensures UI frames are never blocked by prefetch operations
@@ -895,7 +1039,9 @@ class YTPlayerUtils {
         await Future.delayed(Duration(milliseconds: delay));
       }
 
-      if (kDebugMode) {print('YTPlayerUtils: Prefetch complete, cache size: $cacheSize');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: Prefetch complete, cache size: $cacheSize');
+      }
     });
   }
 
@@ -912,7 +1058,9 @@ class YTPlayerUtils {
         isMetered: isMetered,
       );
     } catch (e) {
-      if (kDebugMode) {print('YTPlayerUtils: Prefetch failed for $videoId: $e');}
+      if (kDebugMode) {
+        print('YTPlayerUtils: Prefetch failed for $videoId: $e');
+      }
     }
   }
 
@@ -924,7 +1072,9 @@ class YTPlayerUtils {
   }) async {
     if (hasCachedData(videoId)) return;
 
-    if (kDebugMode) {print('YTPlayerUtils: Prefetching next track: $videoId');}
+    if (kDebugMode) {
+      print('YTPlayerUtils: Prefetching next track: $videoId');
+    }
     await _prefetchSingle(videoId, quality, false);
   }
 

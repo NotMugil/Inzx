@@ -16,6 +16,13 @@ class AudioSettingsScreen extends ConsumerWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final currentQuality = ref.watch(audioQualityProvider);
     final streamInfo = ref.watch(streamQualityInfoProvider);
+    final streamCacheWifiOnly = ref.watch(streamCacheWifiOnlyProvider);
+    final streamCacheLimitMb = ref.watch(streamCacheSizeLimitMbProvider);
+    final streamCacheMaxConcurrent = ref.watch(
+      streamCacheMaxConcurrentProvider,
+    );
+    final crossfadeDurationMs = ref.watch(crossfadeDurationMsProvider);
+    final streamCacheUsageAsync = ref.watch(streamAudioCacheUsageBytesProvider);
     final playerService = ref.watch(audioPlayerServiceProvider);
 
     return Scaffold(
@@ -132,6 +139,76 @@ class AudioSettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 32),
 
+          Text(
+            'Playback Transition',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : MineColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Blend the end of the current track into the start of the next',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.white54 : MineColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildCrossfadeSection(
+            isDark: isDark,
+            colorScheme: colorScheme,
+            currentDurationMs: crossfadeDurationMs,
+            onChanged: (value) async {
+              await playerService.setCrossfadeDurationMs(value);
+            },
+          ),
+
+          const SizedBox(height: 32),
+
+          // Streaming cache section
+          Text(
+            'Streaming Cache',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : MineColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Pre-caches next tracks and plays from local cache when available',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.white54 : MineColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildStreamingCacheSection(
+            context,
+            ref: ref,
+            isDark: isDark,
+            colorScheme: colorScheme,
+            wifiOnly: streamCacheWifiOnly,
+            cacheLimitMb: streamCacheLimitMb,
+            maxConcurrent: streamCacheMaxConcurrent,
+            usageAsync: streamCacheUsageAsync,
+            onWifiOnlyChanged: (enabled) async {
+              await playerService.setStreamCacheWifiOnly(enabled);
+              ref.read(streamAudioCacheRefreshProvider.notifier).state++;
+            },
+            onCacheLimitChanged: (limitMb) async {
+              await playerService.setStreamCacheSizeLimitMb(limitMb);
+              ref.read(streamAudioCacheRefreshProvider.notifier).state++;
+            },
+            onMaxConcurrentChanged: (value) async {
+              await playerService.setStreamCacheMaxConcurrent(value);
+            },
+          ),
+
+          const SizedBox(height: 32),
+
           // Download quality section
           Text(
             'Download Quality',
@@ -202,7 +279,9 @@ class AudioSettingsScreen extends ConsumerWidget {
             : colorScheme.primaryContainer.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark ? Colors.white12 : colorScheme.primary.withValues(alpha: 0.2),
+          color: isDark
+              ? Colors.white12
+              : colorScheme.primary.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -353,11 +432,294 @@ class AudioSettingsScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildStreamingCacheSection(
+    BuildContext context, {
+    required WidgetRef ref,
+    required bool isDark,
+    required ColorScheme colorScheme,
+    required bool wifiOnly,
+    required int cacheLimitMb,
+    required int maxConcurrent,
+    required AsyncValue<int> usageAsync,
+    required Future<void> Function(bool enabled) onWifiOnlyChanged,
+    required Future<void> Function(int limitMb) onCacheLimitChanged,
+    required Future<void> Function(int value) onMaxConcurrentChanged,
+  }) {
+    const cacheLimitOptions = [256, 512, 1024, 2048, 4096];
+    const concurrencyOptions = [1, 2, 3, 4];
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.grey.shade300,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Iconsax.archive, color: colorScheme.primary, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Smart Stream Cache',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : MineColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    usageAsync.when(
+                      data: (bytes) => Text(
+                        'Used: ${_formatCacheSize(bytes)} / $cacheLimitMb MB',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? Colors.white54
+                              : MineColors.textSecondary,
+                        ),
+                      ),
+                      loading: () => Text(
+                        'Calculating cache usage...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark
+                              ? Colors.white54
+                              : MineColors.textSecondary,
+                        ),
+                      ),
+                      error: (error, stackTrace) => Text(
+                        'Unable to read cache usage',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.red.shade300,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Pre-cache Network',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : MineColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                selected: wifiOnly,
+                label: const Text('Wi-Fi only'),
+                selectedColor: colorScheme.primary,
+                labelStyle: TextStyle(
+                  color: wifiOnly
+                      ? colorScheme.onPrimary
+                      : (isDark ? Colors.white : MineColors.textPrimary),
+                ),
+                onSelected: (picked) {
+                  if (picked) {
+                    onWifiOnlyChanged(true);
+                  }
+                },
+              ),
+              ChoiceChip(
+                selected: !wifiOnly,
+                label: const Text('Wi-Fi + mobile data'),
+                selectedColor: colorScheme.primary,
+                labelStyle: TextStyle(
+                  color: !wifiOnly
+                      ? colorScheme.onPrimary
+                      : (isDark ? Colors.white : MineColors.textPrimary),
+                ),
+                onSelected: (picked) {
+                  if (picked) {
+                    onWifiOnlyChanged(false);
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            wifiOnly
+                ? 'Pre-cache runs only when connected to Wi-Fi'
+                : 'Pre-cache can run on both Wi-Fi and mobile data',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white54 : MineColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Concurrent Pre-cache Downloads',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : MineColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: concurrencyOptions.map((option) {
+              final selected = option == maxConcurrent;
+              return ChoiceChip(
+                selected: selected,
+                label: Text('$option'),
+                selectedColor: colorScheme.primary,
+                labelStyle: TextStyle(
+                  color: selected
+                      ? colorScheme.onPrimary
+                      : (isDark ? Colors.white : MineColors.textPrimary),
+                ),
+                onSelected: (picked) {
+                  if (picked) {
+                    onMaxConcurrentChanged(option);
+                  }
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Higher values cache faster but use more network and battery',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white54 : MineColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Cache Size Limit',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : MineColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: cacheLimitOptions.map((optionMb) {
+              final selected = optionMb == cacheLimitMb;
+              return ChoiceChip(
+                selected: selected,
+                label: Text('$optionMb MB'),
+                selectedColor: colorScheme.primary,
+                labelStyle: TextStyle(
+                  color: selected
+                      ? colorScheme.onPrimary
+                      : (isDark ? Colors.white : MineColors.textPrimary),
+                ),
+                onSelected: (picked) {
+                  if (picked) {
+                    onCacheLimitChanged(optionMb);
+                  }
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCrossfadeSection({
+    required bool isDark,
+    required ColorScheme colorScheme,
+    required int currentDurationMs,
+    required Future<void> Function(int value) onChanged,
+  }) {
+    const optionsMs = [0, 1000, 2000, 3000, 5000, 8000];
+
+    String labelFor(int ms) {
+      if (ms == 0) return 'Off';
+      return '${(ms / 1000).toStringAsFixed(ms % 1000 == 0 ? 0 : 1)}s';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.grey.shade300,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: optionsMs.map((optionMs) {
+              final selected = optionMs == currentDurationMs;
+              return ChoiceChip(
+                selected: selected,
+                label: Text(labelFor(optionMs)),
+                selectedColor: colorScheme.primary,
+                labelStyle: TextStyle(
+                  color: selected
+                      ? colorScheme.onPrimary
+                      : (isDark ? Colors.white : MineColors.textPrimary),
+                ),
+                onSelected: (picked) {
+                  if (picked) {
+                    onChanged(optionMs);
+                  }
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            currentDurationMs == 0
+                ? 'Crossfade disabled'
+                : 'Current: ${labelFor(currentDurationMs)}',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.white54 : MineColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatCacheSize(int bytes) {
+    const mb = 1024 * 1024;
+    if (bytes <= 0) return '0 MB';
+    return '${(bytes / mb).toStringAsFixed(1)} MB';
+  }
+
   Widget _buildDataUsageInfo(bool isDark, ColorScheme colorScheme) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.03) : Colors.grey.shade50,
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.03)
+            : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -580,7 +942,9 @@ class _DownloadQualitySetting extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? Colors.white12 : Colors.grey.shade300,
@@ -747,7 +1111,9 @@ class _DownloadPathSetting extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? Colors.white12 : Colors.grey.shade300,
@@ -793,7 +1159,7 @@ class _DownloadPathSetting extends ConsumerWidget {
                               : MineColors.textSecondary,
                         ),
                       ),
-                      error: (_, __) => Text(
+                      error: (error, stackTrace) => Text(
                         'Error loading path',
                         style: TextStyle(
                           fontSize: 12,

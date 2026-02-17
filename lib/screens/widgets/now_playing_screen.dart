@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax/iconsax.dart';
@@ -146,7 +147,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
   final GlobalKey<YTMDrawerState> _drawerKey = GlobalKey<YTMDrawerState>();
   AlbumColors _currentColors = AlbumColors.defaultColors();
   AlbumColors _targetColors = AlbumColors.defaultColors();
-  String? _lastUrl;
+  String? _lastLyricsTrackId;
   String? _lastRelatedTrackId; // Cache key for related tracks
   Future<List<Track>>? _relatedTracksFuture; // Cached future for related tracks
   // ignore: unused_field - reserved for future panel toggle features
@@ -155,6 +156,8 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
   bool _showQueue = false;
   bool _isDrawerExpanded = false; // Track drawer state
   bool _initialColorLoad = true;
+  bool _isAlbumSwipeNavigationInProgress = false;
+  int? _lastAlbumArtSyncedIndex;
 
   @override
   void initState() {
@@ -187,8 +190,8 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     // Page controller for swiping content
     _pageController = PageController(initialPage: 0);
 
-    // Album art page controller - starts at position 1 (current track in center)
-    _albumArtPageController = PageController(initialPage: 1);
+    // Album art page controller follows actual queue index
+    _albumArtPageController = PageController(initialPage: 0);
   }
 
   @override
@@ -206,6 +209,33 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     final playerService = ref.watch(audioPlayerServiceProvider);
     final albumColors = ref.watch(albumColorsProvider);
     final currentTrack = ref.watch(currentTrackProvider);
+    final currentQueueIndex = playerService.currentIndex;
+
+    if (currentQueueIndex >= 0 && currentQueueIndex != _lastAlbumArtSyncedIndex) {
+      _lastAlbumArtSyncedIndex = currentQueueIndex;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_albumArtPageController.hasClients) return;
+        final activePage =
+            (_albumArtPageController.page ?? currentQueueIndex.toDouble())
+                .round();
+        if (activePage == currentQueueIndex) return;
+
+        _isAlbumSwipeNavigationInProgress = true;
+        unawaited(
+          _albumArtPageController
+              .animateToPage(
+                currentQueueIndex,
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutCubic,
+              )
+              .whenComplete(() {
+                if (mounted) {
+                  _isAlbumSwipeNavigationInProgress = false;
+                }
+              }),
+        );
+      });
+    }
 
     // First time opening - trigger color extraction immediately
     if (_initialColorLoad && currentTrack != null) {
@@ -217,11 +247,11 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
       });
     }
 
-    // Track URL change for lyrics fetch
-    final trackUrl = currentTrack?.thumbnailUrl;
-    final isNewTrack = trackUrl != _lastUrl && currentTrack != null;
+    // Track change for lyrics fetch
+    final trackId = currentTrack?.id;
+    final isNewTrack = trackId != _lastLyricsTrackId && currentTrack != null;
     if (isNewTrack) {
-      _lastUrl = trackUrl;
+      _lastLyricsTrackId = trackId;
 
       // Fetch lyrics for new track
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -363,17 +393,8 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
         // Top bar
         _buildTopBar(textColor, secondaryTextColor),
 
-        // Album art (tap to show lyrics)
-        _buildAlbumArt(
-          track,
-          accentColor,
-          onTap: () {
-            setState(() {
-              _showLyrics = true;
-              _tabController.animateTo(1); // Switch to LYRICS tab
-            });
-          },
-        ),
+        // Album art
+        _buildAlbumArt(track, accentColor),
 
         Expanded(
           child: Column(
@@ -1194,11 +1215,19 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     );
   }
 
-  Widget _buildAlbumArt(
-    Track track,
-    Color accentColor, {
-    VoidCallback? onTap,
+  void _handleAlbumArtPageChanged(
+    int pageIndex,
+    player.AudioPlayerService playerService, {
+    required int currentIndex,
+    required int queueLength,
   }) {
+    if (_isAlbumSwipeNavigationInProgress) return;
+    if (pageIndex < 0 || pageIndex >= queueLength) return;
+    if (pageIndex == currentIndex) return;
+    playerService.skipToIndex(pageIndex);
+  }
+
+  Widget _buildAlbumArt(Track track, Color accentColor) {
     final playerService = ref.watch(audioPlayerServiceProvider);
     final queue = playerService.queue;
     final currentIndex = playerService.currentIndex;
@@ -1230,94 +1259,88 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                       controller: _albumArtPageController,
                       clipBehavior: Clip.none,
                       physics: const BouncingScrollPhysics(),
-                      itemCount: 3, // prev, current, next (virtual pages)
+                      itemCount: queue.isEmpty ? 1 : queue.length,
                       onPageChanged: (pageIndex) {
-                        if (pageIndex == 0 && currentIndex > 0) {
-                          // Swiped right -> previous track
-                          playerService.skipToPrevious();
-                          // Reset to center after a short delay
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            if (mounted) {
-                              _albumArtPageController.jumpToPage(1);
-                            }
-                          });
-                        } else if (pageIndex == 2 &&
-                            currentIndex < queue.length - 1) {
-                          // Swiped left -> next track
-                          playerService.skipToNext();
-                          // Reset to center after a short delay
-                          Future.delayed(const Duration(milliseconds: 300), () {
-                            if (mounted) {
-                              _albumArtPageController.jumpToPage(1);
-                            }
-                          });
-                        } else {
-                          // Bounce back to center if can't navigate
-                          _albumArtPageController.animateToPage(
-                            1,
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOut,
-                          );
-                        }
+                        _handleAlbumArtPageChanged(
+                          pageIndex,
+                          playerService,
+                          currentIndex: currentIndex,
+                          queueLength: queue.length,
+                        );
                       },
                       itemBuilder: (context, pageIndex) {
-                        // Get track for this page position
-                        Track? displayTrack;
-                        if (pageIndex == 0 && currentIndex > 0) {
-                          displayTrack = queue[currentIndex - 1];
-                        } else if (pageIndex == 1) {
-                          displayTrack = track;
-                        } else if (pageIndex == 2 &&
-                            currentIndex < queue.length - 1) {
-                          displayTrack = queue[currentIndex + 1];
-                        }
+                        final displayTrack =
+                            (queue.isNotEmpty &&
+                                pageIndex >= 0 &&
+                                pageIndex < queue.length)
+                            ? queue[pageIndex]
+                            : track;
 
-                        // Scale animation for non-center items
-                        final scale = pageIndex == 1 ? 1.0 : 0.85;
-                        final opacity = pageIndex == 1 ? 1.0 : 0.5;
+                        return AnimatedBuilder(
+                          animation: _albumArtPageController,
+                          builder: (context, child) {
+                            final fallbackPage = currentIndex >= 0
+                                ? currentIndex.toDouble()
+                                : 0.0;
+                            final page = _albumArtPageController.hasClients
+                                ? (_albumArtPageController.page ?? fallbackPage)
+                                : fallbackPage;
+                            final delta = (pageIndex - page).abs().clamp(
+                              0.0,
+                              1.0,
+                            );
+                            final scale = (1.0 - (delta * 0.08)).clamp(
+                              0.92,
+                              1.0,
+                            );
+                            final opacity = (1.0 - (delta * 0.28)).clamp(
+                              0.72,
+                              1.0,
+                            );
 
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOut,
-                          transform: Matrix4.identity()..scale(scale),
-                          child: Opacity(
-                            opacity: opacity,
-                            child: Hero(
-                              tag: pageIndex == 1
-                                  ? 'album-art-${track.id}'
-                                  : 'album-art-side-$pageIndex',
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    // Ambient glow (YT Music style)
-                                    BoxShadow(
-                                      color: accentColor.withValues(alpha: 0.55),
-                                      blurRadius: 90,
-                                      spreadRadius: 24,
-                                      offset: const Offset(0, 26),
-                                    ),
-                                    BoxShadow(
-                                      color: accentColor.withValues(alpha: 0.25),
-                                      blurRadius: 140,
-                                      spreadRadius: 40,
-                                      offset: const Offset(0, 36),
-                                    ),
-                                    // Depth shadow for contrast
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.35),
-                                      blurRadius: 30,
-                                      spreadRadius: 5,
-                                      offset: const Offset(0, 10),
-                                    ),
-                                  ],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: _buildAlbumArtContent(
-                                    displayTrack,
-                                    accentColor,
+                            return Transform.scale(
+                              scale: scale.toDouble(),
+                              child: Opacity(
+                                opacity: opacity.toDouble(),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Hero(
+                            tag: pageIndex == currentIndex
+                                ? 'album-art-${track.id}'
+                                : 'album-art-side-${displayTrack.id}-$pageIndex',
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  // Ambient glow (YT Music style)
+                                  BoxShadow(
+                                    color: accentColor.withValues(alpha: 0.55),
+                                    blurRadius: 90,
+                                    spreadRadius: 24,
+                                    offset: const Offset(0, 26),
                                   ),
+                                  BoxShadow(
+                                    color: accentColor.withValues(alpha: 0.25),
+                                    blurRadius: 140,
+                                    spreadRadius: 40,
+                                    offset: const Offset(0, 36),
+                                  ),
+                                  // Depth shadow for contrast
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.35),
+                                    blurRadius: 30,
+                                    spreadRadius: 5,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: _buildAlbumArtContent(
+                                  displayTrack,
+                                  accentColor,
                                 ),
                               ),
                             ),
@@ -1325,13 +1348,6 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                         );
                       },
                     ),
-                    if (onTap != null)
-                      Positioned.fill(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(onTap: onTap),
-                        ),
-                      ),
                   ],
                 ),
               ),
