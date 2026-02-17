@@ -20,13 +20,39 @@ class PlaylistScreen extends ConsumerStatefulWidget {
   final String playlistId;
   final String? playlistTitle;
   final String? thumbnailUrl;
+  final DownloadedPlaylistSnapshot? downloadedSnapshot;
 
   const PlaylistScreen({
     super.key,
     required this.playlistId,
     this.playlistTitle,
     this.thumbnailUrl,
+    this.downloadedSnapshot,
   });
+
+  PlaylistScreen.offlineDownloaded({
+    super.key,
+    required DownloadedPlaylistSnapshot snapshot,
+  }) : playlistId = 'offline_playlist:${snapshot.sourcePlaylistId}',
+       playlistTitle = snapshot.title,
+       thumbnailUrl = snapshot.thumbnailUrl,
+       downloadedSnapshot = snapshot;
+
+  bool get isOfflineDownloaded => downloadedSnapshot != null;
+
+  Playlist buildOfflinePlaylist() {
+    final snapshot = downloadedSnapshot!;
+    return Playlist(
+      id: snapshot.sourcePlaylistId,
+      title: snapshot.title,
+      thumbnailUrl: snapshot.thumbnailUrl,
+      tracks: snapshot.downloadedOrderedTracks,
+      description:
+          'Offline snapshot • ${snapshot.downloadedTracks}/${snapshot.totalTracks} downloaded',
+      author: 'Downloaded',
+      isLocal: true,
+    );
+  }
 
   static void open(
     BuildContext context, {
@@ -63,11 +89,27 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Use ytMusicPlaylistProvider which uses the shared InnerTubeService singleton
-    final playlistAsync = ref.watch(ytMusicPlaylistProvider(widget.playlistId));
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
     final playerService = ref.read(audioPlayerServiceProvider);
+
+    if (widget.isOfflineDownloaded) {
+      final playlist = widget.buildOfflinePlaylist();
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: _buildContent(
+          context,
+          ref,
+          playlist,
+          isDark,
+          colorScheme,
+          playerService,
+        ),
+      );
+    }
+
+    // Use ytMusicPlaylistProvider which uses the shared InnerTubeService singleton
+    final playlistAsync = ref.watch(ytMusicPlaylistProvider(widget.playlistId));
 
     return Scaffold(
       backgroundColor: Colors.black, // Dark background as per mockup
@@ -634,7 +676,12 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
     if (ref == null || tracks.isEmpty) return;
 
     final downloadManager = ref.read(downloadManagerProvider.notifier);
-    downloadManager.addMultipleToQueue(tracks);
+    downloadManager.addPlaylistToQueue(
+      sourcePlaylistId: playlist.id,
+      title: playlist.title,
+      thumbnailUrl: playlist.thumbnailUrl,
+      tracks: tracks,
+    );
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

@@ -11,6 +11,7 @@ import 'package:inzx/data/entities/artist_cache_entity.dart';
 import 'package:inzx/data/entities/playlist_cache_entity.dart';
 import 'package:inzx/data/entities/color_cache_entity.dart';
 import 'package:inzx/data/entities/stream_cache_entity.dart';
+import 'package:inzx/data/entities/downloaded_playlist_entity.dart';
 
 class HiveService {
   static const String _tracksBoxName = 'music_tracks';
@@ -27,6 +28,7 @@ class HiveService {
   static const String _streamCacheBoxName = 'stream_url_cache';
   static const String _localMusicFoldersBoxName = 'local_music_folders';
   static const String _localMusicTracksBoxName = 'local_music_tracks';
+  static const String _downloadedPlaylistsBoxName = 'downloaded_playlists';
 
   static late Box<TrackEntity> _tracksBox;
   static late Box<dynamic> _searchCacheBox;
@@ -42,6 +44,7 @@ class HiveService {
   static late Box<StreamCacheEntity> _streamCacheBox;
   static late Box<String> _localMusicFoldersBox;
   static late Box<TrackEntity> _localMusicTracksBox;
+  static late Box<DownloadedPlaylistEntity> _downloadedPlaylistsBox;
 
   /// Initialize Hive and all boxes
   static Future<void> init() async {
@@ -82,6 +85,9 @@ class HiveService {
     if (!Hive.isAdapterRegistered(11)) {
       Hive.registerAdapter(StreamCacheEntityAdapter());
     }
+    if (!Hive.isAdapterRegistered(12)) {
+      Hive.registerAdapter(DownloadedPlaylistEntityAdapter());
+    }
 
     // Open boxes
     _tracksBox = await Hive.openBox<TrackEntity>(_tracksBoxName);
@@ -103,6 +109,9 @@ class HiveService {
     );
     _localMusicTracksBox = await Hive.openBox<TrackEntity>(
       _localMusicTracksBoxName,
+    );
+    _downloadedPlaylistsBox = await Hive.openBox<DownloadedPlaylistEntity>(
+      _downloadedPlaylistsBoxName,
     );
 
     // Clean up expired cache entries and enforce limits on init
@@ -279,6 +288,8 @@ class HiveService {
   static Box<StreamCacheEntity> get streamCacheBox => _streamCacheBox;
   static Box<String> get localMusicFoldersBox => _localMusicFoldersBox;
   static Box<TrackEntity> get localMusicTracksBox => _localMusicTracksBox;
+  static Box<DownloadedPlaylistEntity> get downloadedPlaylistsBox =>
+      _downloadedPlaylistsBox;
 
   // ============ Cleanup ============
   static Future<void> closeAllBoxes() async {
@@ -300,6 +311,7 @@ class HiveService {
     await _streamCacheBox.clear();
     await _localMusicFoldersBox.clear();
     await _localMusicTracksBox.clear();
+    await _downloadedPlaylistsBox.clear();
   }
 
   /// Compact all boxes to reclaim disk space from deleted entries
@@ -319,5 +331,6 @@ class HiveService {
     await _streamCacheBox.compact();
     await _localMusicFoldersBox.compact();
     await _localMusicTracksBox.compact();
+    await _downloadedPlaylistsBox.compact();
   }
 }

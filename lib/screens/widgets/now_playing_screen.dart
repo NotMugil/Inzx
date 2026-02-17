@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax/iconsax.dart';
@@ -954,7 +955,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
       id: queueItem.track.videoId,
       title: queueItem.track.title,
       artist: queueItem.track.artist,
-      thumbnailUrl: queueItem.track.thumbnailUrl ?? '',
+      thumbnailUrl: queueItem.track.thumbnailUrl,
       duration: Duration(milliseconds: queueItem.track.durationMs),
     );
 
@@ -1366,21 +1367,65 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
   }
 
   Widget _buildAlbumArtContent(Track? displayTrack, Color accentColor) {
-    final imageUrl = displayTrack?.thumbnailUrl != null
-        ? displayTrack!.thumbnailUrl!.replaceAll('w120-h120', 'w600-h600')
-        : null;
+    final localAudioPath = displayTrack?.localFilePath?.trim();
+    if (localAudioPath != null && localAudioPath.isNotEmpty) {
+      final localCoverFile = File('$localAudioPath.cover.jpg');
+      if (localCoverFile.existsSync()) {
+        return Image.file(
+          localCoverFile,
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
+          errorBuilder: (context, error, stackTrace) {
+            return _defaultArt(accentColor);
+          },
+        );
+      }
+    }
 
-    if (imageUrl == null) {
+    final rawThumbnail = displayTrack?.thumbnailUrl?.trim();
+    if (rawThumbnail == null || rawThumbnail.isEmpty) {
       return _defaultArt(accentColor);
     }
 
-    return CachedNetworkImage(
-      imageUrl: imageUrl,
-      fit: BoxFit.fill,
-      alignment: Alignment.center,
-      placeholder: (_, __) => _defaultArt(accentColor),
-      errorWidget: (_, __, ___) => _defaultArt(accentColor),
-    );
+    final candidates = <String>[];
+    final highResFromTrack = displayTrack?.highResThumbnailUrl?.trim();
+    if (highResFromTrack != null && highResFromTrack.isNotEmpty) {
+      candidates.add(highResFromTrack);
+    }
+
+    // Try an upgraded thumbnail first for now playing, then fallback to original.
+    final upgradedThumbnail = rawThumbnail.replaceAll('w120-h120', 'w600-h600');
+    if (upgradedThumbnail.isNotEmpty) {
+      candidates.add(upgradedThumbnail);
+    }
+    candidates.add(rawThumbnail);
+
+    final uniqueCandidates = <String>[];
+    for (final url in candidates) {
+      if (url.isEmpty) continue;
+      if (!uniqueCandidates.contains(url)) {
+        uniqueCandidates.add(url);
+      }
+    }
+
+    return _buildAlbumArtWithFallback(uniqueCandidates, accentColor);
+  }
+
+  Widget _buildAlbumArtWithFallback(List<String> urls, Color accentColor) {
+    if (urls.isEmpty) return _defaultArt(accentColor);
+
+    Widget buildAt(int index) {
+      if (index >= urls.length) return _defaultArt(accentColor);
+      return CachedNetworkImage(
+        imageUrl: urls[index],
+        fit: BoxFit.cover,
+        alignment: Alignment.center,
+        placeholder: (context, url) => _defaultArt(accentColor),
+        errorWidget: (context, url, error) => buildAt(index + 1),
+      );
+    }
+
+    return buildAt(0);
   }
 
   Widget _buildSyncedLyricPreview(Color textColor) {

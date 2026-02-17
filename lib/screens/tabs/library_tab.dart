@@ -1122,6 +1122,9 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
 
   Widget _buildDownloadsView(bool isDark, ColorScheme colorScheme) {
     final downloadsAsync = ref.watch(downloadedTracksProvider);
+    final downloadedPlaylists =
+        ref.watch(downloadedPlaylistsProvider).valueOrNull ??
+        const <DownloadedPlaylistSnapshot>[];
     final downloadManager = ref.watch(downloadManagerProvider);
     final downloadPathAsync = ref.watch(downloadPathProvider);
 
@@ -1132,6 +1135,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
         final queuedDownloads = downloadManager.queuedTasks;
 
         if (tracks.isEmpty &&
+            downloadedPlaylists.isEmpty &&
             activeDownloads.isEmpty &&
             queuedDownloads.isEmpty) {
           return _buildEmptyDownloadsState(isDark, colorScheme);
@@ -1207,6 +1211,31 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
               const SizedBox(height: 16),
             ],
 
+            // Downloaded playlist snapshots (ordered offline playback)
+            if (downloadedPlaylists.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  'Downloaded playlists',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? Colors.white54
+                        : MineColors.textSecondary,
+                  ),
+                ),
+              ),
+              ...downloadedPlaylists.map(
+                (snapshot) => _buildDownloadedPlaylistTile(
+                  snapshot,
+                  isDark,
+                  colorScheme,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
             // Completed downloads
             if (tracks.isNotEmpty) ...[
               Padding(
@@ -1269,6 +1298,71 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
     );
   }
 
+  Widget _buildDownloadedPlaylistTile(
+    DownloadedPlaylistSnapshot snapshot,
+    bool isDark,
+    ColorScheme colorScheme,
+  ) {
+    final artworkUrl =
+        snapshot.thumbnailUrl ??
+        (snapshot.downloadedOrderedTracks.isNotEmpty
+            ? snapshot.downloadedOrderedTracks.first.thumbnailUrl
+            : null);
+
+    return ListTile(
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: artworkUrl != null
+            ? CachedNetworkImage(
+                imageUrl: artworkUrl,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(
+                  width: 48,
+                  height: 48,
+                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  child: const Icon(Icons.queue_music_rounded),
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  width: 48,
+                  height: 48,
+                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                  child: const Icon(Icons.queue_music_rounded),
+                ),
+              )
+            : Container(
+                width: 48,
+                height: 48,
+                color: isDark ? Colors.white12 : Colors.grey.shade200,
+                child: const Icon(Icons.queue_music_rounded),
+              ),
+      ),
+      title: Text(
+        snapshot.title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: isDark ? Colors.white : MineColors.textPrimary),
+      ),
+      subtitle: Text(
+        '${snapshot.downloadedTracks}/${snapshot.totalTracks} downloaded',
+        style: TextStyle(
+          fontSize: 12,
+          color: isDark ? Colors.white54 : MineColors.textSecondary,
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right_rounded,
+        color: isDark ? Colors.white54 : Colors.grey,
+      ),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PlaylistScreen.offlineDownloaded(snapshot: snapshot),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDownloadingTile(
     DownloadTask task,
     bool isDark,
@@ -1324,14 +1418,38 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
         ],
       ),
       trailing: task.status == DownloadStatus.downloading
-          ? Text(
-              '${(task.progress * 100).toInt()}%',
-              style: TextStyle(fontSize: 12, color: colorScheme.primary),
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${(task.progress * 100).toInt()}%',
+                  style: TextStyle(fontSize: 12, color: colorScheme.primary),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: isDark ? Colors.white54 : Colors.grey,
+                  ),
+                  onPressed: () {
+                    ref
+                        .read(downloadManagerProvider.notifier)
+                        .cancelDownload(task.trackId);
+                  },
+                ),
+              ],
             )
-          : Icon(
-              Icons.hourglass_empty,
-              size: 18,
-              color: isDark ? Colors.white38 : Colors.grey,
+          : IconButton(
+              icon: Icon(
+                Icons.close_rounded,
+                size: 18,
+                color: isDark ? Colors.white54 : Colors.grey,
+              ),
+              onPressed: () {
+                ref
+                    .read(downloadManagerProvider.notifier)
+                    .cancelDownload(task.trackId);
+              },
             ),
     );
   }
@@ -1531,6 +1649,8 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
       builder: (context) => const NowPlayingScreen(),
     );
   }
+
+  
 
   void _showCreatePlaylistDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;

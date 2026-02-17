@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show compute, kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -8,11 +10,21 @@ import 'package:http/http.dart' as http;
 import '../models/models.dart';
 import '../core/services/cache/hive_service.dart';
 import '../data/entities/download_entity.dart';
+import '../data/entities/downloaded_playlist_entity.dart';
 import 'playback/yt_player_utils.dart';
 import 'playback/playback_data.dart';
 import 'notification_service.dart';
 
 const String kDownloadQualityKey = 'download_quality';
+const String kDownloadParallelPartCountKey = 'download_parallel_part_count';
+const String kDownloadParallelMinSizeMbKey = 'download_parallel_min_size_mb';
+const int kDefaultParallelDownloadPartCount = 4;
+const int kMinParallelDownloadPartCount = 2;
+const int kMaxParallelDownloadPartCount = 8;
+const int kDefaultParallelDownloadMinSizeMb = 1;
+const int kMinParallelDownloadMinSizeMb = 1;
+const int kMaxParallelDownloadMinSizeMb = 32;
+const int kMaxTransientDownloadRetries = 8;
 
 /// Get downloads directory path - uses app-private storage (OuterTune style)
 /// This avoids permission issues and keeps files app-contained
@@ -55,6 +67,18 @@ final downloadQualityProvider =
       return DownloadQualityNotifier();
     });
 
+/// Provider for segmented parallel part count used by downloads.
+final downloadParallelPartCountProvider =
+    StateNotifierProvider<DownloadParallelPartCountNotifier, int>((ref) {
+      return DownloadParallelPartCountNotifier();
+    });
+
+/// Provider for minimum file size (MB) before parallel segmented download is used.
+final downloadParallelMinSizeMbProvider =
+    StateNotifierProvider<DownloadParallelMinSizeMbNotifier, int>((ref) {
+      return DownloadParallelMinSizeMbNotifier();
+    });
+
 /// Notifier for download quality
 class DownloadQualityNotifier extends StateNotifier<AudioQuality> {
   DownloadQualityNotifier() : super(AudioQuality.high) {
@@ -80,6 +104,7 @@ class DownloadQualityNotifier extends StateNotifier<AudioQuality> {
 
 /// Trigger to refresh downloaded tracks (incremented when downloads change)
 final downloadedTracksRefreshProvider = StateProvider<int>((ref) => 0);
+final downloadedPlaylistsRefreshProvider = StateProvider<int>((ref) => 0);
 
 /// Provider for downloaded tracks from Hive (for display in library/songs tabs)
 /// File existence checks run in background isolate to avoid UI jank
@@ -136,6 +161,85 @@ final downloadedTracksProvider = FutureProvider<List<Track>>((ref) async {
   }
 });
 
+class DownloadedPlaylistSnapshot {
+  final String sourcePlaylistId;
+  final String title;
+  final String? thumbnailUrl;
+  final int totalTracks;
+  final int downloadedTracks;
+  final List<Track> downloadedOrderedTracks;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  const DownloadedPlaylistSnapshot({
+    required this.sourcePlaylistId,
+    required this.title,
+    this.thumbnailUrl,
+    required this.totalTracks,
+    required this.downloadedTracks,
+    required this.downloadedOrderedTracks,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+}
+
+/// Provider for downloaded playlist snapshots with current download completion.
+final downloadedPlaylistsProvider =
+    FutureProvider<List<DownloadedPlaylistSnapshot>>((ref) async {
+      ref.watch(downloadedPlaylistsRefreshProvider);
+      ref.watch(downloadedTracksRefreshProvider);
+
+      try {
+        final playlists = HiveService.downloadedPlaylistsBox.values.toList()
+          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+        final downloadsById = <String, DownloadEntity>{
+          for (final e in HiveService.downloadsBox.values) e.trackId: e,
+        };
+
+        final snapshots = <DownloadedPlaylistSnapshot>[];
+        for (final playlist in playlists) {
+          final orderedTracks = <Track>[];
+          for (final trackId in playlist.trackIds) {
+            final download = downloadsById[trackId];
+            if (download == null) continue;
+            final localFile = File(download.localPath);
+            if (!await localFile.exists()) continue;
+            orderedTracks.add(
+              Track(
+                id: download.trackId,
+                title: download.title,
+                artist: download.artist,
+                album: download.album,
+                duration: Duration(milliseconds: download.durationMs),
+                thumbnailUrl: download.thumbnailUrl,
+                localFilePath: download.localPath,
+              ),
+            );
+          }
+
+          snapshots.add(
+            DownloadedPlaylistSnapshot(
+              sourcePlaylistId: playlist.sourcePlaylistId,
+              title: playlist.title,
+              thumbnailUrl: playlist.thumbnailUrl,
+              totalTracks: playlist.trackIds.length,
+              downloadedTracks: orderedTracks.length,
+              downloadedOrderedTracks: orderedTracks,
+              createdAt: playlist.createdAt,
+              updatedAt: playlist.updatedAt,
+            ),
+          );
+        }
+        return snapshots;
+      } catch (e) {
+        if (kDebugMode) {
+          print('DownloadService: Failed to load downloaded playlists: $e');
+        }
+        return const <DownloadedPlaylistSnapshot>[];
+      }
+    });
+
 /// Data class for passing download info to isolate
 class _DownloadData {
   final String trackId;
@@ -164,6 +268,67 @@ List<String> _verifyFilesExistIsolate(List<String> paths) {
 
 /// Download status enum
 enum DownloadStatus { queued, downloading, completed, failed, cancelled }
+
+class _DownloadCancelledException implements Exception {
+  const _DownloadCancelledException();
+
+  @override
+  String toString() => 'Download cancelled';
+}
+
+class DownloadParallelPartCountNotifier extends StateNotifier<int> {
+  DownloadParallelPartCountNotifier() : super(kDefaultParallelDownloadPartCount) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value =
+        prefs.getInt(kDownloadParallelPartCountKey) ??
+        kDefaultParallelDownloadPartCount;
+    state = value.clamp(
+      kMinParallelDownloadPartCount,
+      kMaxParallelDownloadPartCount,
+    );
+  }
+
+  Future<void> setPartCount(int value) async {
+    final clamped = value.clamp(
+      kMinParallelDownloadPartCount,
+      kMaxParallelDownloadPartCount,
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(kDownloadParallelPartCountKey, clamped);
+    state = clamped;
+  }
+}
+
+class DownloadParallelMinSizeMbNotifier extends StateNotifier<int> {
+  DownloadParallelMinSizeMbNotifier() : super(kDefaultParallelDownloadMinSizeMb) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final value =
+        prefs.getInt(kDownloadParallelMinSizeMbKey) ??
+        kDefaultParallelDownloadMinSizeMb;
+    state = value.clamp(
+      kMinParallelDownloadMinSizeMb,
+      kMaxParallelDownloadMinSizeMb,
+    );
+  }
+
+  Future<void> setMinSizeMb(int value) async {
+    final clamped = value.clamp(
+      kMinParallelDownloadMinSizeMb,
+      kMaxParallelDownloadMinSizeMb,
+    );
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(kDownloadParallelMinSizeMbKey, clamped);
+    state = clamped;
+  }
+}
 
 /// Individual download task
 class DownloadTask {
@@ -280,7 +445,11 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
   DateTime? _lastNotificationUpdate;
   bool _initialized = false;
   AudioQuality _downloadQuality = AudioQuality.high;
+  int _parallelDownloadPartCount = kDefaultParallelDownloadPartCount;
+  int _parallelDownloadMinBytes =
+      kDefaultParallelDownloadMinSizeMb * 1024 * 1024;
   Timer? _cleanupTimer;
+  final Map<String, int> _transientRetryAttempts = <String, int>{};
 
   DownloadManagerNotifier(this._playerUtils, this._ref)
     : super(const DownloadManagerState()) {
@@ -290,6 +459,8 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
     _loadPersistedDownloads();
     // Load download quality preference
     _loadDownloadQuality();
+    // Load parallel download tuning settings.
+    _loadParallelDownloadSettings();
     // Start cleanup timer (runs every 30 minutes)
     _cleanupTimer = Timer.periodic(
       const Duration(minutes: 30),
@@ -311,6 +482,40 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
   /// Set download quality (called from provider)
   void setDownloadQuality(AudioQuality quality) {
     _downloadQuality = quality;
+  }
+
+  Future<void> _loadParallelDownloadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final partCount =
+        prefs.getInt(kDownloadParallelPartCountKey) ??
+        kDefaultParallelDownloadPartCount;
+    final minSizeMb =
+        prefs.getInt(kDownloadParallelMinSizeMbKey) ??
+        kDefaultParallelDownloadMinSizeMb;
+    _parallelDownloadPartCount = partCount.clamp(
+      kMinParallelDownloadPartCount,
+      kMaxParallelDownloadPartCount,
+    );
+    final clampedMinSizeMb = minSizeMb.clamp(
+      kMinParallelDownloadMinSizeMb,
+      kMaxParallelDownloadMinSizeMb,
+    );
+    _parallelDownloadMinBytes = clampedMinSizeMb * 1024 * 1024;
+  }
+
+  void setParallelDownloadPartCount(int value) {
+    _parallelDownloadPartCount = value.clamp(
+      kMinParallelDownloadPartCount,
+      kMaxParallelDownloadPartCount,
+    );
+  }
+
+  void setParallelDownloadMinSizeMb(int value) {
+    final clamped = value.clamp(
+      kMinParallelDownloadMinSizeMb,
+      kMaxParallelDownloadMinSizeMb,
+    );
+    _parallelDownloadMinBytes = clamped * 1024 * 1024;
   }
 
   /// Get downloads directory - uses app-private storage (OuterTune style)
@@ -454,9 +659,60 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
     }
   }
 
+  /// Create/update a downloaded-playlist snapshot and enqueue its tracks.
+  Future<void> addPlaylistToQueue({
+    required String sourcePlaylistId,
+    required String title,
+    String? thumbnailUrl,
+    required List<Track> tracks,
+  }) async {
+    if (tracks.isEmpty) return;
+    await _upsertDownloadedPlaylistSnapshot(
+      sourcePlaylistId: sourcePlaylistId,
+      title: title,
+      thumbnailUrl: thumbnailUrl,
+      tracks: tracks,
+    );
+    await addMultipleToQueue(tracks);
+  }
+
+  Future<void> _upsertDownloadedPlaylistSnapshot({
+    required String sourcePlaylistId,
+    required String title,
+    String? thumbnailUrl,
+    required List<Track> tracks,
+  }) async {
+    final normalizedId = sourcePlaylistId.trim().isEmpty
+        ? 'playlist_${title.hashCode}'
+        : sourcePlaylistId.trim();
+
+    final trackIds = tracks.map((t) => t.id).toList(growable: false);
+    final trackTitles = <String, String>{for (final t in tracks) t.id: t.title};
+    final trackArtists = <String, String>{
+      for (final t in tracks) t.id: t.artist,
+    };
+
+    final box = HiveService.downloadedPlaylistsBox;
+    final existing = box.get(normalizedId);
+    final now = DateTime.now();
+    final entity = DownloadedPlaylistEntity(
+      sourcePlaylistId: normalizedId,
+      title: title,
+      thumbnailUrl: thumbnailUrl,
+      trackIds: trackIds,
+      trackTitles: trackTitles,
+      trackArtists: trackArtists,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    );
+    await box.put(normalizedId, entity);
+    _ref.read(downloadedPlaylistsRefreshProvider.notifier).state++;
+  }
+
   /// Cancel a download
   void cancelDownload(String trackId) {
     if (!state.tasks.containsKey(trackId)) return;
+    _transientRetryAttempts.remove(trackId);
 
     final task = state.tasks[trackId]!;
     if (task.status == DownloadStatus.downloading) {
@@ -484,6 +740,7 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
   /// Remove a completed/failed download
   Future<void> removeDownload(String trackId) async {
     if (!state.tasks.containsKey(trackId)) return;
+    _transientRetryAttempts.remove(trackId);
 
     final task = state.tasks[trackId]!;
 
@@ -495,6 +752,13 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
           await file.delete();
           if (kDebugMode) {
             print('DownloadService: Deleted file: ${task.localPath}');
+          }
+        }
+        final coverFile = File('${task.localPath!}.cover.jpg');
+        if (await coverFile.exists()) {
+          await coverFile.delete();
+          if (kDebugMode) {
+            print('DownloadService: Deleted cover: ${coverFile.path}');
           }
         }
       } catch (e) {
@@ -525,6 +789,7 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
 
     final task = state.tasks[trackId]!;
     if (task.status != DownloadStatus.failed) return;
+    _transientRetryAttempts.remove(trackId);
 
     final newTasks = Map<String, DownloadTask>.from(state.tasks);
     newTasks[trackId] = task.copyWith(
@@ -567,6 +832,260 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
     if (task == null) return;
 
     _downloadTrack(task);
+  }
+
+  bool _isTaskCancelled(String trackId) {
+    final task = state.tasks[trackId];
+    return task?.status == DownloadStatus.cancelled;
+  }
+
+  bool _isTransientDownloadError(Object error) {
+    if (error is SocketException ||
+        error is HttpException ||
+        error is TimeoutException ||
+        error is HandshakeException) {
+      return true;
+    }
+
+    final message = error.toString().toLowerCase();
+    const transientHints = <String>[
+      'socketexception',
+      'timed out',
+      'connection reset',
+      'connection aborted',
+      'network is unreachable',
+      'software caused connection abort',
+      'failed host lookup',
+      'handshake',
+      'temporarily unavailable',
+      'connection closed before full header was received',
+    ];
+
+    for (final hint in transientHints) {
+      if (message.contains(hint)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _downloadCoverArtForTrack({
+    required String trackId,
+    required String? thumbnailUrl,
+    required String audioFilePath,
+  }) async {
+    final rawUrl = thumbnailUrl?.trim();
+    if (rawUrl == null || rawUrl.isEmpty) return;
+
+    final candidates = <String>[
+      rawUrl.replaceAll('w120-h120', 'w600-h600'),
+      rawUrl,
+    ];
+    final tried = <String>{};
+    final coverFile = File('$audioFilePath.cover.jpg');
+
+    for (final url in candidates) {
+      final candidate = url.trim();
+      if (candidate.isEmpty || !tried.add(candidate)) continue;
+      try {
+        final uri = Uri.tryParse(candidate);
+        if (uri == null) continue;
+
+        final client = HttpClient()
+          ..connectionTimeout = const Duration(seconds: 12);
+        try {
+          final request = await client.getUrl(uri);
+          request.headers.set(HttpHeaders.acceptEncodingHeader, 'identity');
+          request.headers.set(HttpHeaders.connectionHeader, 'close');
+          final response = await request.close();
+          if (response.statusCode != HttpStatus.ok) continue;
+
+          final bytesBuilder = BytesBuilder(copy: false);
+          await for (final chunk in response) {
+            if (_isTaskCancelled(trackId)) {
+              throw const _DownloadCancelledException();
+            }
+            bytesBuilder.add(chunk);
+          }
+
+          final bytes = bytesBuilder.takeBytes();
+          if (bytes.length < 1024) continue;
+          await coverFile.writeAsBytes(bytes, flush: true);
+          if (kDebugMode) {
+            print(
+              'DownloadService: Saved cover art for $trackId (${(bytes.length / 1024).toStringAsFixed(1)} KB)',
+            );
+          }
+          return;
+        } finally {
+          client.close(force: true);
+        }
+      } on _DownloadCancelledException {
+        rethrow;
+      } catch (_) {
+        // Try next candidate URL.
+      }
+    }
+
+    if (kDebugMode) {
+      print('DownloadService: Could not save cover art for $trackId');
+    }
+  }
+
+  Future<int?> _downloadWithParallelRanges({
+    required String trackId,
+    required Uri streamUri,
+    required File outputFile,
+    required int expectedBytes,
+    required void Function(int downloadedBytes) onProgress,
+  }) async {
+    if (_parallelDownloadPartCount < kMinParallelDownloadPartCount) {
+      return null;
+    }
+    if (expectedBytes < _parallelDownloadMinBytes) {
+      return null;
+    }
+
+    final partCount = min(
+      _parallelDownloadPartCount,
+      max(2, expectedBytes ~/ (512 * 1024)),
+    );
+
+    final parts = <({int start, int end, File file})>[];
+    int cursor = 0;
+    final basePartSize = expectedBytes ~/ partCount;
+    final remainder = expectedBytes % partCount;
+    for (int i = 0; i < partCount; i++) {
+      final partSize = basePartSize + (i < remainder ? 1 : 0);
+      final start = cursor;
+      final end = start + partSize - 1;
+      cursor = end + 1;
+      parts.add((
+        start: start,
+        end: end,
+        file: File('${outputFile.path}.seg$i.part'),
+      ));
+    }
+
+    if (kDebugMode) {
+      print(
+        'DownloadService: Trying parallel download for $trackId '
+        '($expectedBytes bytes, parts=$partCount)',
+      );
+    }
+
+    int downloadedBytes = 0;
+
+    Future<void> cleanupParts() async {
+      for (final part in parts) {
+        if (await part.file.exists()) {
+          await part.file.delete();
+        }
+      }
+    }
+
+    try {
+      for (final part in parts) {
+        if (await part.file.exists()) {
+          await part.file.delete();
+        }
+      }
+
+      Future<void> downloadPart(({int start, int end, File file}) part) async {
+        if (_isTaskCancelled(trackId)) {
+          throw const _DownloadCancelledException();
+        }
+        HttpClient? partClient;
+        IOSink? partSink;
+        try {
+          partClient = HttpClient()
+            ..connectionTimeout = const Duration(seconds: 20);
+          final request = await partClient.getUrl(streamUri);
+          request.headers.set(HttpHeaders.acceptEncodingHeader, 'identity');
+          request.headers.set(HttpHeaders.connectionHeader, 'keep-alive');
+          request.headers.set(
+            HttpHeaders.rangeHeader,
+            'bytes=${part.start}-${part.end}',
+          );
+
+          final response = await request.close();
+          if (response.statusCode != 206) {
+            throw HttpException(
+              'Range request returned HTTP ${response.statusCode}',
+            );
+          }
+
+          partSink = part.file.openWrite(mode: FileMode.writeOnly);
+          int partBytes = 0;
+          await for (final chunk in response) {
+            if (_isTaskCancelled(trackId)) {
+              throw const _DownloadCancelledException();
+            }
+            partSink.add(chunk);
+            partBytes += chunk.length;
+            downloadedBytes += chunk.length;
+            onProgress(downloadedBytes);
+          }
+
+          await partSink.flush();
+          await partSink.close();
+          partSink = null;
+
+          final expectedPartBytes = part.end - part.start + 1;
+          if (partBytes != expectedPartBytes) {
+            throw FormatException(
+              'Range part size mismatch ($partBytes vs $expectedPartBytes)',
+            );
+          }
+        } finally {
+          if (partSink != null) {
+            await partSink.close();
+          }
+          partClient?.close(force: true);
+        }
+      }
+
+      await Future.wait(parts.map(downloadPart));
+
+      if (_isTaskCancelled(trackId)) {
+        throw const _DownloadCancelledException();
+      }
+
+      if (await outputFile.exists()) {
+        await outputFile.delete();
+      }
+      final mergeSink = outputFile.openWrite(mode: FileMode.writeOnly);
+      try {
+        for (final part in parts) {
+          await mergeSink.addStream(part.file.openRead());
+        }
+        await mergeSink.flush();
+      } finally {
+        await mergeSink.close();
+      }
+
+      final mergedBytes = await outputFile.length();
+      if (mergedBytes != expectedBytes) {
+        throw FormatException(
+          'Merged range file size mismatch ($mergedBytes vs $expectedBytes)',
+        );
+      }
+
+      await cleanupParts();
+      return mergedBytes;
+    } catch (e) {
+      await cleanupParts();
+      if (await outputFile.exists()) {
+        await outputFile.delete();
+      }
+      if (e is _DownloadCancelledException) {
+        rethrow;
+      }
+      if (kDebugMode) {
+        print('DownloadService: Parallel download fallback for $trackId: $e');
+      }
+      return null;
+    }
   }
 
   /// Download a single track using range-based continuation (OuterTune style)
@@ -620,180 +1139,200 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
       final filePath = '${dir.path}/$fileName';
       final file = File(filePath);
 
-      // === RANGE-BASED DOWNLOAD (OuterTune style) ===
-      // YouTube streams are chunked - we need to handle partial responses
-      // and continue with Range requests until we get the complete file
-
+      // === DOWNLOAD STRATEGY ===
+      // 1) Try segmented parallel range download when content length is known.
+      // 2) Fallback to the existing robust sequential + range continuation flow.
       int totalDownloaded = 0;
-      int expectedTotal = 0;
+      int expectedTotal = result.data!.format.contentLength ?? 0;
       int retryCount = 0;
       const maxRetries = 5;
       const maxRangeAttempts = 10; // Max range continuation attempts
+      bool downloadedWithParallel = false;
+      DateTime lastProgressUpdate = DateTime.now();
 
-      // Delete any existing partial file
+      void reportProgress({bool force = false}) {
+        final now = DateTime.now();
+        if (!force &&
+            now.difference(lastProgressUpdate).inMilliseconds <= 100) {
+          return;
+        }
+        lastProgressUpdate = now;
+        final progress = expectedTotal > 0
+            ? (totalDownloaded / expectedTotal).clamp(0.0, 1.0)
+            : 0.0;
+        _updateTask(
+          task.trackId,
+          task.copyWith(
+            status: DownloadStatus.downloading,
+            progress: progress,
+            downloadedBytes: totalDownloaded,
+            totalBytes: expectedTotal,
+          ),
+        );
+        if (force ||
+            _lastNotificationUpdate == null ||
+            now.difference(_lastNotificationUpdate!).inMilliseconds > 500) {
+          _lastNotificationUpdate = now;
+          _notificationService.updateDownloadProgress(
+            task.trackId,
+            task.track.title,
+            progress,
+          );
+        }
+      }
+
+      // Delete any existing partial file before trying either strategy.
       if (await file.exists()) {
         await file.delete();
       }
 
-      // Open file for writing
-      final sink = file.openWrite(mode: FileMode.writeOnly);
-      DateTime lastProgressUpdate = DateTime.now();
-
-      try {
-        // Initial request (no range header)
-        _httpClient = http.Client();
-        var request = http.Request('GET', Uri.parse(streamUrl));
-        request.headers['Accept-Encoding'] = 'identity';
-        request.headers['Connection'] = 'keep-alive';
-
-        var response = await _httpClient!.send(request);
-
-        if (response.statusCode != 200 && response.statusCode != 206) {
-          throw Exception('HTTP ${response.statusCode}');
-        }
-
-        expectedTotal = response.contentLength ?? 0;
-        if (kDebugMode) {
-          print('DownloadService: Expected total size: $expectedTotal bytes');
-        }
-
-        // Download initial response
-        await for (final chunk in response.stream) {
-          sink.add(chunk);
-          totalDownloaded += chunk.length;
-
-          // Throttled progress updates
-          final now = DateTime.now();
-          if (now.difference(lastProgressUpdate).inMilliseconds > 100) {
-            lastProgressUpdate = now;
-            final progress = expectedTotal > 0
-                ? (totalDownloaded / expectedTotal).clamp(0.0, 1.0)
-                : 0.0;
-
-            _updateTask(
-              task.trackId,
-              task.copyWith(
-                status: DownloadStatus.downloading,
-                progress: progress,
-                downloadedBytes: totalDownloaded,
-                totalBytes: expectedTotal,
-              ),
-            );
-
-            // Notification update (throttled)
-            if (_lastNotificationUpdate == null ||
-                now.difference(_lastNotificationUpdate!).inMilliseconds > 500) {
-              _lastNotificationUpdate = now;
-              _notificationService.updateDownloadProgress(
-                task.trackId,
-                task.track.title,
-                progress,
-              );
-            }
-          }
-        }
-
-        if (kDebugMode) {
-          print('DownloadService: Initial download got $totalDownloaded bytes');
-        }
-
-        // === RANGE CONTINUATION ===
-        // If we didn't get the full file, continue with Range requests
-        int rangeAttempts = 0;
-        while (expectedTotal > 0 &&
-            totalDownloaded < expectedTotal &&
-            rangeAttempts < maxRangeAttempts) {
-          rangeAttempts++;
-          final missing = expectedTotal - totalDownloaded;
+      if (expectedTotal >= _parallelDownloadMinBytes &&
+          _parallelDownloadPartCount >= kMinParallelDownloadPartCount) {
+        final parallelBytes = await _downloadWithParallelRanges(
+          trackId: task.trackId,
+          streamUri: Uri.parse(streamUrl),
+          outputFile: file,
+          expectedBytes: expectedTotal,
+          onProgress: (downloadedBytes) {
+            totalDownloaded = downloadedBytes;
+            reportProgress();
+          },
+        );
+        if (parallelBytes != null) {
+          downloadedWithParallel = true;
+          totalDownloaded = parallelBytes;
+          reportProgress(force: true);
           if (kDebugMode) {
             print(
-              'DownloadService: Missing $missing bytes, attempting Range request (attempt $rangeAttempts)',
+              'DownloadService: Parallel download complete for ${task.trackId} ($totalDownloaded bytes)',
             );
           }
+        }
+      }
 
-          // Small delay before retry
-          await Future.delayed(const Duration(milliseconds: 500));
+      if (!downloadedWithParallel) {
+        if (_isTaskCancelled(task.trackId)) {
+          throw const _DownloadCancelledException();
+        }
 
-          // Create new request with Range header
+        // Existing sequential download + continuation fallback.
+        final sink = file.openWrite(mode: FileMode.writeOnly);
+        try {
           _httpClient?.close();
           _httpClient = http.Client();
-          request = http.Request('GET', Uri.parse(streamUrl));
+          var request = http.Request('GET', Uri.parse(streamUrl));
           request.headers['Accept-Encoding'] = 'identity';
           request.headers['Connection'] = 'keep-alive';
-          request.headers['Range'] = 'bytes=$totalDownloaded-';
 
-          try {
-            response = await _httpClient!.send(request);
+          var response = await _httpClient!.send(request);
 
-            // 206 Partial Content is expected for range requests
-            // 200 OK with full content is also acceptable (server ignores range)
-            if (response.statusCode != 200 && response.statusCode != 206) {
-              if (kDebugMode) {
-                print(
-                  'DownloadService: Range request failed with ${response.statusCode}',
-                );
-              }
-              break;
+          if (response.statusCode != 200 && response.statusCode != 206) {
+            throw Exception('HTTP ${response.statusCode}');
+          }
+
+          final responseLength = response.contentLength ?? 0;
+          if (responseLength > 0) {
+            expectedTotal = responseLength;
+          }
+          if (kDebugMode) {
+            print('DownloadService: Expected total size: $expectedTotal bytes');
+          }
+
+          await for (final chunk in response.stream) {
+            if (_isTaskCancelled(task.trackId)) {
+              throw const _DownloadCancelledException();
             }
+            sink.add(chunk);
+            totalDownloaded += chunk.length;
+            reportProgress();
+          }
 
-            int chunkBytes = 0;
-            await for (final chunk in response.stream) {
-              sink.add(chunk);
-              totalDownloaded += chunk.length;
-              chunkBytes += chunk.length;
+          if (kDebugMode) {
+            print('DownloadService: Initial download got $totalDownloaded bytes');
+          }
 
-              // Progress update
-              final now = DateTime.now();
-              if (now.difference(lastProgressUpdate).inMilliseconds > 100) {
-                lastProgressUpdate = now;
-                final progress = (totalDownloaded / expectedTotal).clamp(
-                  0.0,
-                  1.0,
-                );
-
-                _updateTask(
-                  task.trackId,
-                  task.copyWith(
-                    status: DownloadStatus.downloading,
-                    progress: progress,
-                    downloadedBytes: totalDownloaded,
-                    totalBytes: expectedTotal,
-                  ),
-                );
-              }
+          int rangeAttempts = 0;
+          while (expectedTotal > 0 &&
+              totalDownloaded < expectedTotal &&
+              rangeAttempts < maxRangeAttempts) {
+            if (_isTaskCancelled(task.trackId)) {
+              throw const _DownloadCancelledException();
             }
-
+            rangeAttempts++;
+            final missing = expectedTotal - totalDownloaded;
             if (kDebugMode) {
               print(
-                'DownloadService: Range request got $chunkBytes more bytes, total: $totalDownloaded',
+                'DownloadService: Missing $missing bytes, attempting Range request (attempt $rangeAttempts)',
               );
             }
 
-            // If we got 0 bytes, server has nothing more
-            if (chunkBytes == 0) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            if (_isTaskCancelled(task.trackId)) {
+              throw const _DownloadCancelledException();
+            }
+
+            _httpClient?.close();
+            _httpClient = http.Client();
+            request = http.Request('GET', Uri.parse(streamUrl));
+            request.headers['Accept-Encoding'] = 'identity';
+            request.headers['Connection'] = 'keep-alive';
+            request.headers['Range'] = 'bytes=$totalDownloaded-';
+
+            try {
+              response = await _httpClient!.send(request);
+
+              if (response.statusCode != 200 && response.statusCode != 206) {
+                if (kDebugMode) {
+                  print(
+                    'DownloadService: Range request failed with ${response.statusCode}',
+                  );
+                }
+                break;
+              }
+
+              int chunkBytes = 0;
+              await for (final chunk in response.stream) {
+                if (_isTaskCancelled(task.trackId)) {
+                  throw const _DownloadCancelledException();
+                }
+                sink.add(chunk);
+                totalDownloaded += chunk.length;
+                chunkBytes += chunk.length;
+                reportProgress();
+              }
+
               if (kDebugMode) {
                 print(
-                  'DownloadService: Server returned empty response, assuming EOF',
+                  'DownloadService: Range request got $chunkBytes more bytes, total: $totalDownloaded',
                 );
               }
-              break;
-            }
-          } catch (e) {
-            if (kDebugMode) {
-              print('DownloadService: Range request error: $e');
-            }
-            retryCount++;
-            if (retryCount >= maxRetries) {
-              break;
+
+              if (chunkBytes == 0) {
+                if (kDebugMode) {
+                  print(
+                    'DownloadService: Server returned empty response, assuming EOF',
+                  );
+                }
+                break;
+              }
+            } catch (e) {
+              if (e is _DownloadCancelledException) {
+                rethrow;
+              }
+              if (kDebugMode) {
+                print('DownloadService: Range request error: $e');
+              }
+              retryCount++;
+              if (retryCount >= maxRetries) {
+                break;
+              }
             }
           }
-        }
 
-        await sink.flush();
-        await sink.close();
-      } catch (e) {
-        await sink.close();
-        rethrow;
+          await sink.flush();
+        } finally {
+          await sink.close();
+        }
       }
 
       // === RELAXED VALIDATION (OuterTune style) ===
@@ -868,6 +1407,13 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
       }
       // === END VALIDATION ===
 
+      // Save cover art next to audio file for offline-safe now playing artwork.
+      await _downloadCoverArtForTrack(
+        trackId: task.trackId,
+        thumbnailUrl: task.track.thumbnailUrl,
+        audioFilePath: filePath,
+      );
+
       // Mark as completed
       final completedTask = task.copyWith(
         status: DownloadStatus.completed,
@@ -877,6 +1423,7 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
         localPath: filePath,
       );
       _updateTask(task.trackId, completedTask);
+      _transientRetryAttempts.remove(task.trackId);
 
       // Persist to Hive for next app restart
       await _persistDownload(completedTask);
@@ -897,10 +1444,87 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
 
       // Process next
       _processQueue();
+    } on _DownloadCancelledException {
+      if (kDebugMode) {
+        print('DownloadService: Download cancelled: ${task.trackId}');
+      }
+
+      // Best-effort cleanup of partial output file.
+      try {
+        final dir = await _downloadsDir;
+        final sanitizedTitle = _sanitizeFileName(task.track.title);
+        final sanitizedArtist = _sanitizeFileName(task.track.artist);
+        final possibleExtensions = const <String>['.opus', '.m4a', '.webm'];
+        for (final ext in possibleExtensions) {
+          final candidate = File(
+            '${dir.path}/$sanitizedArtist - $sanitizedTitle$ext',
+          );
+          if (await candidate.exists()) {
+            await candidate.delete();
+          }
+          final coverCandidate = File(
+            '${dir.path}/$sanitizedArtist - $sanitizedTitle$ext.cover.jpg',
+          );
+          if (await coverCandidate.exists()) {
+            await coverCandidate.delete();
+          }
+        }
+      } catch (_) {}
+
+      await _notificationService.cancelNotification(task.trackId);
+      _transientRetryAttempts.remove(task.trackId);
+
+      final currentTask = state.tasks[task.trackId];
+      if (currentTask != null && currentTask.status != DownloadStatus.cancelled) {
+        _updateTask(
+          task.trackId,
+          task.copyWith(status: DownloadStatus.cancelled, error: null),
+        );
+      }
+
+      final newQueue = List<String>.from(state.queue);
+      newQueue.remove(task.trackId);
+      state = state.copyWith(queue: newQueue, isDownloading: false);
+      _processQueue();
     } catch (e) {
       if (kDebugMode) {
         print('Download error: $e');
       }
+
+      final isTransient = _isTransientDownloadError(e);
+      if (isTransient) {
+        final attempt = (_transientRetryAttempts[task.trackId] ?? 0) + 1;
+        _transientRetryAttempts[task.trackId] = attempt;
+
+        if (attempt <= kMaxTransientDownloadRetries) {
+          final retryDelaySeconds = min(30, 2 + (attempt * 3));
+          if (kDebugMode) {
+            print(
+              'DownloadService: Transient error for $task.trackId, retry $attempt/$kMaxTransientDownloadRetries in $retryDelaySeconds s',
+            );
+          }
+
+          _updateTask(
+            task.trackId,
+            task.copyWith(
+              status: DownloadStatus.queued,
+              error: 'Retrying ($attempt/$kMaxTransientDownloadRetries)...',
+            ),
+          );
+
+          state = state.copyWith(isDownloading: false);
+          Future<void>.delayed(Duration(seconds: retryDelaySeconds), () {
+            final current = state.tasks[task.trackId];
+            if (current == null || current.status == DownloadStatus.cancelled) {
+              return;
+            }
+            _processQueue();
+          });
+          return;
+        }
+      }
+
+      _transientRetryAttempts.remove(task.trackId);
 
       _updateTask(
         task.trackId,
