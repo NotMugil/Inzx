@@ -9,6 +9,7 @@
 /// - [PoTokenGenerator] - Anti-403 proof-of-origin tokens
 /// - [SignatureCipherDecryptor] - Decrypts encrypted stream URLs
 /// - [PlaybackData] - Playback data models
+library;
 
 export 'playback_data.dart';
 export 'yt_playback_client.dart';

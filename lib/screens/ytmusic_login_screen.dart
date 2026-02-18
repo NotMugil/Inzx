@@ -254,8 +254,8 @@ class _YTMusicLoginScreenState extends ConsumerState<YTMusicLoginScreen> {
               // Merge info if we found better data
               if (extractedAccount.avatarUrl != null) {
                 account = extractedAccount;
-              } else if (account == null) {
-                account = extractedAccount;
+              } else {
+                account ??= extractedAccount;
               }
             }
           } catch (e) {

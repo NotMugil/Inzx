@@ -79,11 +79,15 @@ class YTMusicAuthNotifier extends StateNotifier<YTMusicAuthState> {
           isLoading: false,
           account: _authService.account,
         );
-        if (kDebugMode) {print('✅ Auth restored from cache');}
+        if (kDebugMode) {
+          print('✅ Auth restored from cache');
+        }
         return;
       }
     } catch (e) {
-      if (kDebugMode) {print('Failed to restore cached auth: $e');}
+      if (kDebugMode) {
+        print('Failed to restore cached auth: $e');
+      }
     }
 
     // Then try to initialize from storage
@@ -114,7 +118,9 @@ class YTMusicAuthNotifier extends StateNotifier<YTMusicAuthState> {
     );
 
     if (success) {
-      if (kDebugMode) {print('✅ Login successful, auth cached');}
+      if (kDebugMode) {
+        print('✅ Login successful, auth cached');
+      }
     }
 
     return success;
@@ -138,18 +144,26 @@ final ytMusicLikedSongsProvider = FutureProvider.autoDispose<List<Track>>((
 
   final authState = ref.watch(ytMusicAuthStateProvider);
   if (!authState.isLoggedIn) {
-    if (kDebugMode) {print('ytMusicLikedSongsProvider: Not logged in, returning empty');}
+    if (kDebugMode) {
+      print('ytMusicLikedSongsProvider: Not logged in, returning empty');
+    }
     return [];
   }
 
-  if (kDebugMode) {print('ytMusicLikedSongsProvider: Fetching liked songs...');}
+  if (kDebugMode) {
+    print('ytMusicLikedSongsProvider: Fetching liked songs...');
+  }
   final innerTube = ref.watch(innerTubeServiceProvider);
   final songs = await innerTube.getLikedSongs();
-  if (kDebugMode) {print('ytMusicLikedSongsProvider: Loaded ${songs.length} liked songs');}
+  if (kDebugMode) {
+    print('ytMusicLikedSongsProvider: Loaded ${songs.length} liked songs');
+  }
   if (songs.isNotEmpty) {
-    if (kDebugMode) {print(
-      'ytMusicLikedSongsProvider: First few IDs: ${songs.take(5).map((t) => t.id).join(", ")}',
-    );}
+    if (kDebugMode) {
+      print(
+        'ytMusicLikedSongsProvider: First few IDs: ${songs.take(5).map((t) => t.id).join(", ")}',
+      );
+    }
   }
   return songs;
 });
@@ -278,9 +292,11 @@ class HomePageNotifier extends StateNotifier<HomePageState> {
       final cachedContinuationToken = cacheResult.$2;
 
       CacheAnalytics.instance.recordCacheHit();
-      if (kDebugMode) {print(
-        'HomePageNotifier: Loaded ${cachedShelves.length} shelves from cache, hasMore=${cachedContinuationToken != null}',
-      );}
+      if (kDebugMode) {
+        print(
+          'HomePageNotifier: Loaded ${cachedShelves.length} shelves from cache, hasMore=${cachedContinuationToken != null}',
+        );
+      }
       state = HomePageState(
         shelves: cachedShelves,
         continuationToken: cachedContinuationToken,
@@ -291,7 +307,11 @@ class HomePageNotifier extends StateNotifier<HomePageState> {
       // Check if cache is stale - if so, refresh in background
       final cached = HiveService.homePageBox.get(_cacheKey);
       if (cached != null && cached.isStale) {
-        if (kDebugMode) {print('HomePageNotifier: Cache is stale, refreshing in background...');}
+        if (kDebugMode) {
+          print(
+            'HomePageNotifier: Cache is stale, refreshing in background...',
+          );
+        }
         _fetchFromNetwork(updateState: true);
       }
       return;
@@ -299,7 +319,9 @@ class HomePageNotifier extends StateNotifier<HomePageState> {
 
     CacheAnalytics.instance.recordCacheMiss();
     state = state.copyWith(isLoading: true, hasError: false);
-    if (kDebugMode) {print('HomePageNotifier: Starting loadInitial (double fetch)...');}
+    if (kDebugMode) {
+      print('HomePageNotifier: Starting loadInitial (double fetch)...');
+    }
 
     await _fetchFromNetwork(updateState: true);
   }
@@ -316,7 +338,9 @@ class HomePageNotifier extends StateNotifier<HomePageState> {
         return (shelves, cached.continuationToken);
       }
     } catch (e) {
-      if (kDebugMode) {print('HomePageNotifier: Cache load error: $e');}
+      if (kDebugMode) {
+        print('HomePageNotifier: Cache load error: $e');
+      }
     }
     return null;
   }
@@ -336,9 +360,13 @@ class HomePageNotifier extends StateNotifier<HomePageState> {
         ttlMinutes: 30,
       );
       HiveService.homePageBox.put(_cacheKey, entity);
-      if (kDebugMode) {print('HomePageNotifier: Saved ${shelves.length} shelves to cache');}
+      if (kDebugMode) {
+        print('HomePageNotifier: Saved ${shelves.length} shelves to cache');
+      }
     } catch (e) {
-      if (kDebugMode) {print('HomePageNotifier: Cache save error: $e');}
+      if (kDebugMode) {
+        print('HomePageNotifier: Cache save error: $e');
+      }
     }
   }
 
@@ -388,11 +416,15 @@ class HomePageNotifier extends StateNotifier<HomePageState> {
           fetchedAt: DateTime.now(),
         );
       }
-      if (kDebugMode) {print(
-        'Network load complete: ${allShelves.length} shelves, hasMore=${content2.continuationToken != null}',
-      );}
+      if (kDebugMode) {
+        print(
+          'Network load complete: ${allShelves.length} shelves, hasMore=${content2.continuationToken != null}',
+        );
+      }
     } catch (e) {
-      if (kDebugMode) {print('Error loading home page: $e');}
+      if (kDebugMode) {
+        print('Error loading home page: $e');
+      }
       if (!mounted) return;
       if (updateState) {
         state = state.copyWith(isLoading: false, hasError: true);
@@ -434,18 +466,24 @@ class HomePageNotifier extends StateNotifier<HomePageState> {
         isLoadingMore: false,
         clearContinuation: content.continuationToken == null,
       );
-      if (kDebugMode) {print(
-        'Loaded more: ${newShelves.length} new shelves, total=${state.shelves.length}, hasMore=${state.hasMore}',
-      );}
+      if (kDebugMode) {
+        print(
+          'Loaded more: ${newShelves.length} new shelves, total=${state.shelves.length}, hasMore=${state.hasMore}',
+        );
+      }
     } catch (e) {
-      if (kDebugMode) {print('Error loading more: $e');}
+      if (kDebugMode) {
+        print('Error loading more: $e');
+      }
       state = state.copyWith(isLoadingMore: false);
     }
   }
 
   Future<void> refresh() async {
     if (!mounted) return; // Guard: check if notifier is still alive
-    if (kDebugMode) {print('HomePageNotifier: refresh() called (force network fetch)');}
+    if (kDebugMode) {
+      print('HomePageNotifier: refresh() called (force network fetch)');
+    }
     // Reset state completely and reload
     state = const HomePageState();
     state = state.copyWith(isLoading: true, hasError: false);
@@ -499,11 +537,15 @@ final ytMusicPlaylistProvider = FutureProvider.family<Playlist?, String>((
     final cached = HiveService.playlistsBox.get(playlistId);
     if (cached != null && !cached.isExpired) {
       CacheAnalytics.instance.recordCacheHit();
-      if (kDebugMode) {print('ytMusicPlaylistProvider: Loaded $playlistId from cache');}
+      if (kDebugMode) {
+        print('ytMusicPlaylistProvider: Loaded $playlistId from cache');
+      }
       return await compute(_parsePlaylistIsolate, cached.playlistJson);
     }
   } catch (e) {
-    if (kDebugMode) {print('ytMusicPlaylistProvider: Cache load error: $e');}
+    if (kDebugMode) {
+      print('ytMusicPlaylistProvider: Cache load error: $e');
+    }
   }
 
   // Fetch from network
@@ -524,9 +566,13 @@ final ytMusicPlaylistProvider = FutureProvider.family<Playlist?, String>((
           ttlMinutes: 30,
         ),
       );
-      if (kDebugMode) {print('ytMusicPlaylistProvider: Cached $playlistId');}
+      if (kDebugMode) {
+        print('ytMusicPlaylistProvider: Cached $playlistId');
+      }
     } catch (e) {
-      if (kDebugMode) {print('ytMusicPlaylistProvider: Cache save error: $e');}
+      if (kDebugMode) {
+        print('ytMusicPlaylistProvider: Cache save error: $e');
+      }
     }
   }
 
@@ -542,11 +588,15 @@ final ytMusicAlbumProvider = FutureProvider.family<Album?, String>((
     final cached = HiveService.albumsBox.get(albumId);
     if (cached != null && !cached.isExpired) {
       CacheAnalytics.instance.recordCacheHit();
-      if (kDebugMode) {print('ytMusicAlbumProvider: Loaded $albumId from cache');}
+      if (kDebugMode) {
+        print('ytMusicAlbumProvider: Loaded $albumId from cache');
+      }
       return await compute(_parseAlbumIsolate, cached.albumJson);
     }
   } catch (e) {
-    if (kDebugMode) {print('ytMusicAlbumProvider: Cache load error: $e');}
+    if (kDebugMode) {
+      print('ytMusicAlbumProvider: Cache load error: $e');
+    }
   }
 
   // Fetch from network
@@ -567,9 +617,13 @@ final ytMusicAlbumProvider = FutureProvider.family<Album?, String>((
           ttlMinutes: 60,
         ),
       );
-      if (kDebugMode) {print('ytMusicAlbumProvider: Cached $albumId');}
+      if (kDebugMode) {
+        print('ytMusicAlbumProvider: Cached $albumId');
+      }
     } catch (e) {
-      if (kDebugMode) {print('ytMusicAlbumProvider: Cache save error: $e');}
+      if (kDebugMode) {
+        print('ytMusicAlbumProvider: Cache save error: $e');
+      }
     }
   }
 
@@ -585,11 +639,15 @@ final ytMusicArtistProvider = FutureProvider.family<Artist?, String>((
     final cached = HiveService.artistsBox.get(artistId);
     if (cached != null && !cached.isExpired) {
       CacheAnalytics.instance.recordCacheHit();
-      if (kDebugMode) {print('ytMusicArtistProvider: Loaded $artistId from cache');}
+      if (kDebugMode) {
+        print('ytMusicArtistProvider: Loaded $artistId from cache');
+      }
       return await compute(_parseArtistIsolate, cached.artistJson);
     }
   } catch (e) {
-    if (kDebugMode) {print('ytMusicArtistProvider: Cache load error: $e');}
+    if (kDebugMode) {
+      print('ytMusicArtistProvider: Cache load error: $e');
+    }
   }
 
   // Fetch from network
@@ -610,9 +668,13 @@ final ytMusicArtistProvider = FutureProvider.family<Artist?, String>((
           ttlMinutes: 60,
         ),
       );
-      if (kDebugMode) {print('ytMusicArtistProvider: Cached $artistId');}
+      if (kDebugMode) {
+        print('ytMusicArtistProvider: Cached $artistId');
+      }
     } catch (e) {
-      if (kDebugMode) {print('ytMusicArtistProvider: Cache save error: $e');}
+      if (kDebugMode) {
+        print('ytMusicArtistProvider: Cache save error: $e');
+      }
     }
   }
 

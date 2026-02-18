@@ -424,11 +424,11 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                           ? CachedNetworkImage(
                               imageUrl: artist.thumbnailUrl!,
                               fit: BoxFit.cover,
-                              placeholder: (_, __) => _defaultArtwork(
+                              placeholder: (_, _) => _defaultArtwork(
                                 colorScheme,
                                 Icons.person_rounded,
                               ),
-                              errorWidget: (_, __, ___) => _defaultArtwork(
+                              errorWidget: (_, _, _) => _defaultArtwork(
                                 colorScheme,
                                 Icons.person_rounded,
                               ),
@@ -555,9 +555,9 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
               ? CachedNetworkImage(
                   imageUrl: track.thumbnailUrl!,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) =>
+                  placeholder: (_, _) =>
                       _defaultArtwork(colorScheme, Icons.music_note_rounded),
-                  errorWidget: (_, __, ___) =>
+                  errorWidget: (_, _, _) =>
                       _defaultArtwork(colorScheme, Icons.music_note_rounded),
                 )
               : _defaultArtwork(colorScheme, Icons.music_note_rounded),
@@ -659,9 +659,9 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
               ? CachedNetworkImage(
                   imageUrl: artist.thumbnailUrl!,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) =>
+                  placeholder: (_, _) =>
                       _defaultArtwork(colorScheme, Icons.person_rounded),
-                  errorWidget: (_, __, ___) =>
+                  errorWidget: (_, _, _) =>
                       _defaultArtwork(colorScheme, Icons.person_rounded),
                 )
               : _defaultArtwork(colorScheme, Icons.person_rounded),
@@ -714,9 +714,9 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                     ? CachedNetworkImage(
                         imageUrl: artist.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) =>
+                        placeholder: (_, _) =>
                             _defaultArtwork(colorScheme, Icons.person_rounded),
-                        errorWidget: (_, __, ___) =>
+                        errorWidget: (_, _, _) =>
                             _defaultArtwork(colorScheme, Icons.person_rounded),
                       )
                     : _defaultArtwork(colorScheme, Icons.person_rounded),
@@ -800,9 +800,9 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
               ? CachedNetworkImage(
                   imageUrl: album.thumbnailUrl!,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) =>
+                  placeholder: (_, _) =>
                       _defaultArtwork(colorScheme, Icons.album_rounded),
-                  errorWidget: (_, __, ___) =>
+                  errorWidget: (_, _, _) =>
                       _defaultArtwork(colorScheme, Icons.album_rounded),
                 )
               : _defaultArtwork(colorScheme, Icons.album_rounded),
@@ -858,9 +858,9 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
                     ? CachedNetworkImage(
                         imageUrl: album.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) =>
+                        placeholder: (_, _) =>
                             _defaultArtwork(colorScheme, Icons.album_rounded),
-                        errorWidget: (_, __, ___) =>
+                        errorWidget: (_, _, _) =>
                             _defaultArtwork(colorScheme, Icons.album_rounded),
                       )
                     : _defaultArtwork(colorScheme, Icons.album_rounded),
@@ -939,9 +939,9 @@ class _SearchResultsScreenState extends ConsumerState<SearchResultsScreen> {
               ? CachedNetworkImage(
                   imageUrl: playlist.thumbnailUrl!,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) =>
+                  placeholder: (_, _) =>
                       _defaultArtwork(colorScheme, Icons.queue_music_rounded),
-                  errorWidget: (_, __, ___) =>
+                  errorWidget: (_, _, _) =>
                       _defaultArtwork(colorScheme, Icons.queue_music_rounded),
                 )
               : _defaultArtwork(colorScheme, Icons.queue_music_rounded),

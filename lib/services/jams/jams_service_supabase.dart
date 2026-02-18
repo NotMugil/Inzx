@@ -176,7 +176,7 @@ class JamsService {
     );
 
     // Subscribe to channel
-    await _channel!.subscribe((status, error) async {
+    _channel!.subscribe((status, error) async {
       if (kDebugMode) {
         print('JamsService: Channel status: $status');
       }

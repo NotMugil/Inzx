@@ -40,11 +40,13 @@ class GeniusProvider implements LyricsProvider {
         int scoreB = 0;
 
         if ((resultA['title'] as String).toLowerCase() ==
-            info.title.toLowerCase())
+            info.title.toLowerCase()) {
           scoreA++;
+        }
         if ((resultB['title'] as String).toLowerCase() ==
-            info.title.toLowerCase())
+            info.title.toLowerCase()) {
           scoreB++;
+        }
 
         final artistA = resultA['primary_artist']?['name'] as String? ?? '';
         final artistB = resultB['primary_artist']?['name'] as String? ?? '';
@@ -90,7 +92,9 @@ class GeniusProvider implements LyricsProvider {
         source: name,
       );
     } catch (e) {
-      if (kDebugMode) {print('Genius error: $e');}
+      if (kDebugMode) {
+        print('Genius error: $e');
+      }
       return null;
     }
   }
@@ -147,7 +151,9 @@ String? _extractLyricsIsolate(String html) {
 
     return null;
   } catch (e) {
-    if (kDebugMode) {print('Error extracting Genius lyrics: $e');}
+    if (kDebugMode) {
+      print('Error extracting Genius lyrics: $e');
+    }
     return null;
   }
 }

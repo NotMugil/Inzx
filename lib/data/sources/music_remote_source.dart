@@ -132,5 +132,5 @@ class MusicRemoteSource {
 
   /// Get current user account info (if authenticated)
   // ignore: unnecessary_getters_setters
-  get currentAccount => _authService.account;
+  YTMusicAccount? get currentAccount => _authService.account;
 }

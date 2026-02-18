@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -463,18 +462,5 @@ class _NavItemWidget extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-/// Custom curve for smooth spring effect
-class _LiquidGlassCurve extends Curve {
-  const _LiquidGlassCurve();
-
-  @override
-  double transformInternal(double t) {
-    const c1 = 1.70158;
-    const c3 = c1 + 1;
-    final result = 1 + c3 * math.pow(t - 1, 3) + c1 * math.pow(t - 1, 2);
-    return result.clamp(0.0, 1.2);
   }
 }

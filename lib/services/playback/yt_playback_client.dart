@@ -339,7 +339,7 @@ class InnerTubeApi {
     // Use music API for web clients, otherwise standard
     final baseUrl =
         (innerTubeClient.name == 'WEB_REMIX' || innerTubeClient.name == 'WEB')
-        ? _playerApiUrl
+        ? _musicPlayerApiUrl
         : _playerApiUrl;
 
     try {
@@ -387,9 +387,11 @@ class InnerTubeApi {
         body['serviceIntegrityDimensions'] = {'poToken': poToken};
       }
 
-      if (kDebugMode) {print(
-        'InnerTubeApi: Requesting player for $videoId with ${innerTubeClient.name}',
-      );}
+      if (kDebugMode) {
+        print(
+          'InnerTubeApi: Requesting player for $videoId with ${innerTubeClient.name}',
+        );
+      }
 
       final response = await _client
           .post(url, headers: headers, body: jsonEncode(body))
@@ -400,11 +402,15 @@ class InnerTubeApi {
         final json = await compute(_jsonDecodeIsolate, response.body);
         return PlayerResponse.fromJson(json);
       } else {
-        if (kDebugMode) {print('InnerTubeApi: HTTP ${response.statusCode} for $videoId');}
+        if (kDebugMode) {
+          print('InnerTubeApi: HTTP ${response.statusCode} for $videoId');
+        }
         return null;
       }
     } catch (e) {
-      if (kDebugMode) {print('InnerTubeApi: Error getting player for $videoId: $e');}
+      if (kDebugMode) {
+        print('InnerTubeApi: Error getting player for $videoId: $e');
+      }
       return null;
     }
   }
@@ -429,7 +435,9 @@ class InnerTubeApi {
         }
       }
     } catch (e) {
-      if (kDebugMode) {print('InnerTubeApi: Failed to get STS: $e');}
+      if (kDebugMode) {
+        print('InnerTubeApi: Failed to get STS: $e');
+      }
     }
     return 20073; // Fallback
   }
@@ -452,10 +460,14 @@ class InnerTubeApi {
           .timeout(const Duration(seconds: 8));
 
       final statusCode = streamedResponse.statusCode;
-      if (kDebugMode) {print('InnerTubeApi: HEAD validation returned $statusCode');}
+      if (kDebugMode) {
+        print('InnerTubeApi: HEAD validation returned $statusCode');
+      }
       return statusCode == 200 || statusCode == 206;
     } catch (e) {
-      if (kDebugMode) {print('InnerTubeApi: URL validation failed: $e');}
+      if (kDebugMode) {
+        print('InnerTubeApi: URL validation failed: $e');
+      }
       return false;
     }
   }

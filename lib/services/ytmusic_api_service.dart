@@ -32,7 +32,6 @@ class InnerTubeService {
   };
 
   String? _sapisid;
-  String? _psid;
   Map<String, String> _cookies = {};
 
   /// Whether the user is authenticated
@@ -42,14 +41,12 @@ class InnerTubeService {
   void setAuthCookies(Map<String, String> cookies) {
     _cookies = cookies;
     _sapisid = cookies['SAPISID'] ?? cookies['__Secure-3PAPISID'];
-    _psid = cookies['__Secure-3PSID'] ?? cookies['SID'];
   }
 
   /// Clear authentication
   void clearAuth() {
     _cookies.clear();
     _sapisid = null;
-    _psid = null;
   }
 
   /// Generate SAPISIDHASH for authenticated requests
@@ -497,22 +494,24 @@ class InnerTubeService {
       continuationContents ??=
           response['continuationContents']?['musicShelfContinuation'];
 
-      if (continuationContents != null) {
-        final items = continuationContents['contents'] as List?;
-        if (items != null) {
-          for (final item in items) {
-            final track = _parseTrackItem(item);
-            if (track != null) tracks.add(track);
-          }
-        }
+      if (continuationContents == null) {
+        return _parseLibraryContinuation(response);
+      }
 
-        // Get next continuation token
-        final continuations = continuationContents['continuations'] as List?;
-        if (continuations != null && continuations.isNotEmpty) {
-          continuation =
-              continuations[0]['nextContinuationData']?['continuation']
-                  as String?;
+      final items = continuationContents['contents'] as List?;
+      if (items != null) {
+        for (final item in items) {
+          final track = _parseTrackItem(item);
+          if (track != null) tracks.add(track);
         }
+      }
+
+      // Get next continuation token
+      final continuations = continuationContents['continuations'] as List?;
+      if (continuations != null && continuations.isNotEmpty) {
+        continuation =
+            continuations[0]['nextContinuationData']?['continuation']
+                as String?;
       }
     } catch (e) {
       if (kDebugMode) {
@@ -993,11 +992,11 @@ class InnerTubeService {
 
     if (response == null) return null;
 
-    // Parse first page
-    final (playlist, continuation) = _parsePlaylistDetailsWithContinuation(
-      response,
-      playlistId,
-    );
+    // Parse first page (new parser with fallback to legacy parser)
+    final (playlistWithContinuation, continuation) =
+        _parsePlaylistDetailsWithContinuation(response, playlistId);
+    final playlist =
+        playlistWithContinuation ?? _parsePlaylistDetails(response, playlistId);
     if (playlist == null) return null;
 
     // Fetch remaining pages if there's a continuation
@@ -4898,13 +4897,6 @@ class InnerTubeService {
       final browseEndpoint = renderer['clickCommand']?['browseEndpoint'];
       final browseId = browseEndpoint?['browseId'] as String?;
 
-      // These are typically mood/genre pills
-      final solid = renderer['solid'];
-      String? thumbnailUrl;
-      if (solid != null) {
-        // Has a colored background
-      }
-
       return HomeShelfItem(
         id: browseId ?? buttonText.hashCode.toString(),
         title: buttonText,
@@ -5050,20 +5042,18 @@ class InnerTubeService {
       }
 
       // Try alternative path for grid results
-      if (contents == null) {
-        contents =
-            _navigateJson(response, [
-                  'contents',
-                  'twoColumnBrowseResultsRenderer',
-                  'tabs',
-                  0,
-                  'tabRenderer',
-                  'content',
-                  'sectionListRenderer',
-                  'contents',
-                ])
-                as List?;
-      }
+      contents ??=
+          _navigateJson(response, [
+                'contents',
+                'twoColumnBrowseResultsRenderer',
+                'tabs',
+                0,
+                'tabRenderer',
+                'content',
+                'sectionListRenderer',
+                'contents',
+              ])
+              as List?;
 
       // Parse continuation response
       if (contents == null) {

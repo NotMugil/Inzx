@@ -4,8 +4,6 @@ import 'package:iconsax/iconsax.dart';
 import '../../core/design_system/design_system.dart';
 import '../providers/providers.dart';
 import '../services/playback/playback_data.dart';
-import '../services/download_service.dart';
-import '../services/album_color_extractor.dart';
 
 /// Audio settings screen with quality selection
 class AudioSettingsScreen extends ConsumerWidget {

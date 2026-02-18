@@ -189,7 +189,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
             ? CachedNetworkImage(
                 imageUrl: avatarUrl,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
+                placeholder: (_, _) => Container(
                   color: Colors.red.shade400,
                   child: Center(
                     child: Text(
@@ -202,7 +202,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
                     ),
                   ),
                 ),
-                errorWidget: (_, __, ___) => Container(
+                errorWidget: (_, _, _) => Container(
                   color: Colors.red.shade400,
                   child: Center(
                     child: Text(
@@ -453,8 +453,9 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
 
       // Skip Quick Picks if we used it as welcome (double check to be safe)
       if (shelf.type == HomeShelfType.quickPicks &&
-          welcomeShelf?.type == HomeShelfType.quickPicks)
+          welcomeShelf?.type == HomeShelfType.quickPicks) {
         continue;
+      }
 
       Widget? shelfWidget;
 
@@ -760,9 +761,8 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
                     ? CachedNetworkImage(
                         imageUrl: track.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => _defaultArtwork(colorScheme),
-                        errorWidget: (_, __, ___) =>
-                            _defaultArtwork(colorScheme),
+                        placeholder: (_, _) => _defaultArtwork(colorScheme),
+                        errorWidget: (_, _, _) => _defaultArtwork(colorScheme),
                       )
                     : _defaultArtwork(colorScheme),
               ),
@@ -902,66 +902,6 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildTrendingSection(bool isDark, ColorScheme colorScheme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Text(
-                'JUST UPDATED',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: _textColors.tertiary,
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            "Today's biggest hits",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: colorScheme.primary,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 170, // Reduced from 180
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              final playlists = [
-                ('The Hit List', 'Top 50 songs right now'),
-                ('Pop Certified', 'The best pop hits'),
-                ('Bollywood Hotlist', 'Latest Bollywood'),
-                ('Indie Mix', 'Fresh indie tracks'),
-                ('Chill Vibes', 'Relax and unwind'),
-              ];
-              return _buildPlaylistCard(
-                playlists[index].$1,
-                playlists[index].$2,
-                isDark,
-                colorScheme,
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 
@@ -1105,49 +1045,6 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildPlaylistCard(
-    String title,
-    String subtitle,
-    bool isDark,
-    ColorScheme colorScheme,
-  ) {
-    return Container(
-      width: 130, // Slightly smaller
-      margin: const EdgeInsets.only(right: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 130,
-            height: 130, // Reduced from 140
-            decoration: BoxDecoration(
-              color: colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.queue_music_rounded,
-                size: 48,
-                color: colorScheme.primary,
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: _textColors.primary,
-            ),
-          ),
-        ],
       ),
     );
   }

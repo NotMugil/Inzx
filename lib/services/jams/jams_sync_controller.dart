@@ -519,7 +519,6 @@ class JamsSyncController {
   // ============ Participant Sync ============
 
   // Track last received state to avoid redundant processing
-  String? _lastReceivedTrackId;
   bool? _lastReceivedIsPlaying;
   int? _lastReceivedPositionMs;
   DateTime?
@@ -673,7 +672,6 @@ class JamsSyncController {
     }
 
     // Update tracking - use NOW as when we received this broadcast
-    _lastReceivedTrackId = hostTrack.videoId;
     _lastReceivedIsPlaying = playback.isPlaying;
     _lastReceivedPositionMs = playback.positionMs;
     _lastReceivedTime = now;

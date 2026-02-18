@@ -15,67 +15,31 @@ class MineShadows {
 
   /// Subtle shadow - for hover states
   static const List<BoxShadow> xs = [
-    BoxShadow(
-      color: MineColors.shadow,
-      blurRadius: 2,
-      offset: Offset(0, 1),
-    ),
+    BoxShadow(color: MineColors.shadow, blurRadius: 2, offset: Offset(0, 1)),
   ];
 
   /// Small shadow - for cards at rest
   static const List<BoxShadow> sm = [
-    BoxShadow(
-      color: Color(0x08000000),
-      blurRadius: 8,
-      offset: Offset(0, 2),
-    ),
-    BoxShadow(
-      color: Color(0x05000000),
-      blurRadius: 4,
-      offset: Offset(0, 1),
-    ),
+    BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2)),
+    BoxShadow(color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 1)),
   ];
 
   /// Medium shadow - for elevated cards
   static const List<BoxShadow> md = [
-    BoxShadow(
-      color: Color(0x0A000000),
-      blurRadius: 16,
-      offset: Offset(0, 4),
-    ),
-    BoxShadow(
-      color: Color(0x05000000),
-      blurRadius: 6,
-      offset: Offset(0, 2),
-    ),
+    BoxShadow(color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, 4)),
+    BoxShadow(color: Color(0x05000000), blurRadius: 6, offset: Offset(0, 2)),
   ];
 
   /// Large shadow - for modals and sheets
   static const List<BoxShadow> lg = [
-    BoxShadow(
-      color: Color(0x0D000000),
-      blurRadius: 24,
-      offset: Offset(0, 8),
-    ),
-    BoxShadow(
-      color: Color(0x08000000),
-      blurRadius: 12,
-      offset: Offset(0, 4),
-    ),
+    BoxShadow(color: Color(0x0D000000), blurRadius: 24, offset: Offset(0, 8)),
+    BoxShadow(color: Color(0x08000000), blurRadius: 12, offset: Offset(0, 4)),
   ];
 
   /// Extra large shadow - for floating elements
   static const List<BoxShadow> xl = [
-    BoxShadow(
-      color: Color(0x10000000),
-      blurRadius: 32,
-      offset: Offset(0, 12),
-    ),
-    BoxShadow(
-      color: Color(0x08000000),
-      blurRadius: 16,
-      offset: Offset(0, 6),
-    ),
+    BoxShadow(color: Color(0x10000000), blurRadius: 32, offset: Offset(0, 12)),
+    BoxShadow(color: Color(0x08000000), blurRadius: 16, offset: Offset(0, 6)),
   ];
 
   // ─────────────────────────────────────────────────────────────────

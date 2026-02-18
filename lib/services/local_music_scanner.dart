@@ -239,7 +239,9 @@ class LocalMusicScanner {
       final result = await FilePicker.platform.getDirectoryPath();
       return result;
     } catch (e) {
-      if (kDebugMode) {print('Error picking folder: $e');}
+      if (kDebugMode) {
+        print('Error picking folder: $e');
+      }
       return null;
     }
   }
@@ -280,7 +282,9 @@ class LocalMusicScanner {
           tracks.add(track);
         }
       } catch (e) {
-        if (kDebugMode) {print('Error processing file $filePath: $e');}
+        if (kDebugMode) {
+          print('Error processing file $filePath: $e');
+        }
       }
     }
 

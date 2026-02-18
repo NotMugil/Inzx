@@ -37,7 +37,6 @@ class _ShelfDetailsScreenState extends ConsumerState<ShelfDetailsScreen> {
   bool _isLoading = false;
   bool _isLoadingMore = false;
   bool _hasError = false;
-  String? _errorMessage;
 
   @override
   void initState() {
@@ -99,7 +98,6 @@ class _ShelfDetailsScreenState extends ConsumerState<ShelfDetailsScreen> {
         setState(() {
           _isLoading = false;
           _hasError = true;
-          _errorMessage = e.toString();
         });
       }
     }

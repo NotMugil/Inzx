@@ -283,8 +283,8 @@ class OptimizedTrackItem extends ConsumerWidget {
                         imageUrl: track.thumbnailUrl!,
                         fit: BoxFit.cover,
                         memCacheWidth: 112, // 2x for high DPI
-                        placeholder: (_, __) => _defaultArtwork(),
-                        errorWidget: (_, __, ___) => _defaultArtwork(),
+                        placeholder: (_, _) => _defaultArtwork(),
+                        errorWidget: (_, _, _) => _defaultArtwork(),
                       )
                     : _defaultArtwork(),
               ),
@@ -440,8 +440,8 @@ class MixesShelf extends ConsumerWidget {
                     ? CachedNetworkImage(
                         imageUrl: item.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => _defaultMixArt(item),
-                        errorWidget: (_, __, ___) => _defaultMixArt(item),
+                        placeholder: (_, _) => _defaultMixArt(item),
+                        errorWidget: (_, _, _) => _defaultMixArt(item),
                       )
                     : _defaultMixArt(item),
               ),
@@ -626,9 +626,8 @@ class ContentCarouselShelf extends ConsumerWidget {
                     ? CachedNetworkImage(
                         imageUrl: item.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => _defaultArt(item, isArtist),
-                        errorWidget: (_, __, ___) =>
-                            _defaultArt(item, isArtist),
+                        placeholder: (_, _) => _defaultArt(item, isArtist),
+                        errorWidget: (_, _, _) => _defaultArt(item, isArtist),
                       )
                     : _defaultArt(item, isArtist),
               ),
@@ -842,8 +841,8 @@ class ChartsShelf extends ConsumerWidget {
                     ? CachedNetworkImage(
                         imageUrl: item.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => _defaultChartArt(),
-                        errorWidget: (_, __, ___) => _defaultChartArt(),
+                        placeholder: (_, _) => _defaultChartArt(),
+                        errorWidget: (_, _, _) => _defaultChartArt(),
                       )
                     : _defaultChartArt(),
               ),
@@ -1003,8 +1002,8 @@ class VideoShelf extends ConsumerWidget {
                         ? CachedNetworkImage(
                             imageUrl: item.thumbnailUrl!,
                             fit: BoxFit.cover,
-                            placeholder: (_, __) => _defaultVideoArt(),
-                            errorWidget: (_, __, ___) => _defaultVideoArt(),
+                            placeholder: (_, _) => _defaultVideoArt(),
+                            errorWidget: (_, _, _) => _defaultVideoArt(),
                           )
                         : _defaultVideoArt(),
                   ),
@@ -1203,8 +1202,8 @@ class CommunityShelf extends ConsumerWidget {
                     ? CachedNetworkImage(
                         imageUrl: item.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => _defaultCommunityArt(),
-                        errorWidget: (_, __, ___) => _defaultCommunityArt(),
+                        placeholder: (_, _) => _defaultCommunityArt(),
+                        errorWidget: (_, _, _) => _defaultCommunityArt(),
                       )
                     : _defaultCommunityArt(),
               ),
@@ -1371,8 +1370,8 @@ class DailyDiscoverShelf extends ConsumerWidget {
                     ? CachedNetworkImage(
                         imageUrl: item.thumbnailUrl!,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => _defaultDailyArt(),
-                        errorWidget: (_, __, ___) => _defaultDailyArt(),
+                        placeholder: (_, _) => _defaultDailyArt(),
+                        errorWidget: (_, _, _) => _defaultDailyArt(),
                       )
                     : _defaultDailyArt(),
               ),

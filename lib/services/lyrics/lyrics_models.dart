@@ -1,4 +1,5 @@
 /// Lyrics data models and provider interface
+library;
 
 /// Represents a single line of synced lyrics
 class LyricLine {

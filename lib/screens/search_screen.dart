@@ -341,7 +341,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       },
       loading: () =>
           _buildEmptyState(isDark, 'Search for music', Icons.search_rounded),
-      error: (_, __) =>
+      error: (_, _) =>
           _buildEmptyState(isDark, 'Search for music', Icons.search_rounded),
     );
   }
@@ -1105,13 +1105,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       width: size,
       height: size,
       fit: BoxFit.cover,
-      placeholder: (_, __) => Container(
+      placeholder: (_, _) => Container(
         width: size,
         height: size,
         color: Colors.grey[800],
         child: Icon(fallbackIcon, color: Colors.white54, size: size * 0.4),
       ),
-      errorWidget: (_, __, ___) => Container(
+      errorWidget: (_, _, _) => Container(
         width: size,
         height: size,
         color: Colors.grey[800],

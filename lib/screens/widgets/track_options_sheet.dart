@@ -5,7 +5,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
-import '../../providers/jams_provider.dart';
 import '../../services/download_service.dart';
 import 'album_screen.dart';
 import 'artist_screen.dart';
@@ -199,8 +198,9 @@ class TrackOptionsSheet extends ConsumerWidget {
                   final canControlPlayback = ref.watch(
                     canControlJamPlaybackProvider,
                   );
-                  if (!isInJam || !canControlPlayback)
+                  if (!isInJam || !canControlPlayback) {
                     return const SizedBox.shrink();
+                  }
 
                   return _buildOption(
                     context,
@@ -241,8 +241,9 @@ class TrackOptionsSheet extends ConsumerWidget {
                   final canControlPlayback = ref.watch(
                     canControlJamPlaybackProvider,
                   );
-                  if (!isInJam || !canControlPlayback)
+                  if (!isInJam || !canControlPlayback) {
                     return const SizedBox.shrink();
+                  }
 
                   return _buildOption(
                     context,
@@ -378,7 +379,9 @@ class TrackOptionsSheet extends ConsumerWidget {
                 onTap: () {
                   Navigator.pop(context);
                   final url = 'https://music.youtube.com/watch?v=${track.id}';
-                  Share.share('${track.title} by ${track.artist}\n$url');
+                  SharePlus.instance.share(
+                    ShareParams(text: '${track.title} by ${track.artist}\n$url'),
+                  );
                 },
               ),
 

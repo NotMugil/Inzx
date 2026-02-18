@@ -130,7 +130,9 @@ class YTMusicSyncService {
         _lastSync = DateTime.parse(lastSyncStr);
       }
     } catch (e) {
-      if (kDebugMode) {print('Error loading cached YTMusic data: $e');}
+      if (kDebugMode) {
+        print('Error loading cached YTMusic data: $e');
+      }
     }
   }
 

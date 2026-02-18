@@ -67,7 +67,9 @@ class RecentlyPlayedNotifier extends StateNotifier<List<Track>> {
       final tracks = await compute(_parseRecentlyPlayedIsolate, jsonList);
       state = tracks;
     } catch (e) {
-      if (kDebugMode) {print('Error loading recently played: $e');}
+      if (kDebugMode) {
+        print('Error loading recently played: $e');
+      }
       state = [];
     }
   }

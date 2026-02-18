@@ -3,10 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:marquee/marquee.dart';
 import '../providers/providers.dart';
-import '../providers/music_providers.dart';
-import '../providers/jams_provider.dart';
 import '../services/jams/jams_models.dart';
 import '../core/design_system/colors.dart';
 
@@ -886,162 +883,10 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
     );
   }
 
-  Widget _buildNowPlaying(
-    bool isDark,
-    JamPlaybackState playback,
-    AlbumColors albumColors,
-  ) {
-    final track = playback.currentTrack!;
-    final hasAlbumColors = !albumColors.isDefault;
-    // Respect light/dark mode
-    final textColor = isDark
-        ? (hasAlbumColors ? albumColors.onBackground : Colors.white)
-        : Colors.black;
-    final secondaryColor = textColor.withValues(alpha: 0.7);
-    final accentColor = hasAlbumColors ? albumColors.accent : Colors.purple;
-    final surfaceColor = hasAlbumColors
-        ? albumColors.surface.withValues(alpha: isDark ? 0.5 : 0.15)
-        : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: textColor.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        children: [
-          // Thumbnail
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: track.thumbnailUrl != null
-                ? CachedNetworkImage(
-                    imageUrl: track.thumbnailUrl!,
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.cover,
-                  )
-                : Container(
-                    width: 56,
-                    height: 56,
-                    color: Colors.grey,
-                    child: const Icon(Icons.music_note, color: Colors.white),
-                  ),
-          ),
-          const SizedBox(width: 12),
-          // Track info with marquee for long text
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Title with marquee
-                SizedBox(
-                  height: 20,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final textPainter = TextPainter(
-                        text: TextSpan(
-                          text: track.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: textColor,
-                          ),
-                        ),
-                        maxLines: 1,
-                        textDirection: TextDirection.ltr,
-                      )..layout();
-
-                      if (textPainter.width > constraints.maxWidth) {
-                        return Marquee(
-                          text: track.title,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: textColor,
-                          ),
-                          scrollAxis: Axis.horizontal,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          blankSpace: 40.0,
-                          velocity: 25.0,
-                          pauseAfterRound: const Duration(seconds: 2),
-                          startPadding: 0.0,
-                        );
-                      }
-                      return Text(
-                        track.title,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: textColor,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 2),
-                // Artist with marquee
-                SizedBox(
-                  height: 18,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final textPainter = TextPainter(
-                        text: TextSpan(
-                          text: track.artist,
-                          style: TextStyle(fontSize: 13, color: secondaryColor),
-                        ),
-                        maxLines: 1,
-                        textDirection: TextDirection.ltr,
-                      )..layout();
-
-                      if (textPainter.width > constraints.maxWidth) {
-                        return Marquee(
-                          text: track.artist,
-                          style: TextStyle(fontSize: 13, color: secondaryColor),
-                          scrollAxis: Axis.horizontal,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          blankSpace: 40.0,
-                          velocity: 25.0,
-                          pauseAfterRound: const Duration(seconds: 2),
-                          startPadding: 0.0,
-                        );
-                      }
-                      return Text(
-                        track.artist,
-                        style: TextStyle(fontSize: 13, color: secondaryColor),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Play state indicator
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              playback.isPlaying ? Icons.pause : Icons.play_arrow,
-              color: accentColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _createSession() async {
     setState(() => _isJoining = false);
     final code = await ref.read(jamsNotifierProvider.notifier).createSession();
+    if (!mounted) return;
     if (code != null) {
       ScaffoldMessenger.of(
         context,
@@ -1054,6 +899,7 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
     final success = await ref
         .read(jamsNotifierProvider.notifier)
         .joinSession(_codeController.text.toUpperCase());
+    if (!mounted) return;
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

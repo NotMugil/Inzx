@@ -36,7 +36,7 @@ class MusicLocalSource {
     try {
       final entities = {for (var t in tracks) t.id: _toEntity(t)};
       await HiveService.tracksBox.putAll(entities);
-      await _updateMetadata(_cacheKeyPrefix + 'batch', 30);
+      await _updateMetadata('${_cacheKeyPrefix}batch', 30);
       return Result.success(null);
     } catch (e) {
       return Result.failure(CacheException('Failed to save tracks: $e'));

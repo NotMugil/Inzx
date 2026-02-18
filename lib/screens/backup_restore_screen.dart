@@ -256,7 +256,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       await file.writeAsString(json);
 
       // Share
-      await Share.shareXFiles([XFile(file.path)], subject: 'Mine Music Backup');
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(file.path)], subject: 'Mine Music Backup'),
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

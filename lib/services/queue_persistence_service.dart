@@ -32,7 +32,9 @@ class QueuePersistenceService {
       // Save timestamp
       await prefs.setInt(_savedAtKey, DateTime.now().millisecondsSinceEpoch);
     } catch (e) {
-      if (kDebugMode) {print('Error saving queue: $e');}
+      if (kDebugMode) {
+        print('Error saving queue: $e');
+      }
     }
   }
 
@@ -62,7 +64,9 @@ class QueuePersistenceService {
         savedAt: savedAt,
       );
     } catch (e) {
-      if (kDebugMode) {print('Error loading queue: $e');}
+      if (kDebugMode) {
+        print('Error loading queue: $e');
+      }
       return null;
     }
   }
@@ -76,7 +80,9 @@ class QueuePersistenceService {
       await prefs.remove(_positionKey);
       await prefs.remove(_savedAtKey);
     } catch (e) {
-      if (kDebugMode) {print('Error clearing queue: $e');}
+      if (kDebugMode) {
+        print('Error clearing queue: $e');
+      }
     }
   }
 

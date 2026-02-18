@@ -46,7 +46,9 @@ class YTMusicAuthService {
         return true;
       }
     } catch (e) {
-      if (kDebugMode) {print('Failed to initialize YTMusic auth: $e');}
+      if (kDebugMode) {
+        print('Failed to initialize YTMusic auth: $e');
+      }
     }
     return false;
   }
@@ -66,11 +68,15 @@ class YTMusicAuthService {
           _account = YTMusicAccount.fromJson(jsonDecode(accountJson));
         }
 
-        if (kDebugMode) {print('✅ Auth cache restored (${_cookies.length} cookies)');}
+        if (kDebugMode) {
+          print('✅ Auth cache restored (${_cookies.length} cookies)');
+        }
         return true;
       }
     } catch (e) {
-      if (kDebugMode) {print('Failed to restore auth cache: $e');}
+      if (kDebugMode) {
+        print('Failed to restore auth cache: $e');
+      }
     }
     return false;
   }
@@ -86,7 +92,9 @@ class YTMusicAuthService {
           cookies.containsKey('SAPISID') ||
           cookies.containsKey('__Secure-3PAPISID');
       if (!hasAuth) {
-        if (kDebugMode) {print('Missing authentication cookies');}
+        if (kDebugMode) {
+          print('Missing authentication cookies');
+        }
         return false;
       }
 
@@ -111,7 +119,9 @@ class YTMusicAuthService {
 
       return true;
     } catch (e) {
-      if (kDebugMode) {print('Login failed: $e');}
+      if (kDebugMode) {
+        print('Login failed: $e');
+      }
       return false;
     }
   }

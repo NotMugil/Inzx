@@ -808,8 +808,8 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          placeholder: (_, __) => _defaultAlbumArt(colorScheme),
-                          errorWidget: (_, __, ___) =>
+                          placeholder: (_, _) => _defaultAlbumArt(colorScheme),
+                          errorWidget: (_, _, _) =>
                               _defaultAlbumArt(colorScheme),
                         )
                       : _defaultAlbumArt(colorScheme),
@@ -1220,18 +1220,13 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? Colors.white54
-                        : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : MineColors.textSecondary,
                   ),
                 ),
               ),
               ...downloadedPlaylists.map(
-                (snapshot) => _buildDownloadedPlaylistTile(
-                  snapshot,
-                  isDark,
-                  colorScheme,
-                ),
+                (snapshot) =>
+                    _buildDownloadedPlaylistTile(snapshot, isDark, colorScheme),
               ),
               const SizedBox(height: 16),
             ],
@@ -1318,13 +1313,13 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
+                placeholder: (_, _) => Container(
                   width: 48,
                   height: 48,
                   color: isDark ? Colors.white12 : Colors.grey.shade200,
                   child: const Icon(Icons.queue_music_rounded),
                 ),
-                errorWidget: (_, __, ___) => Container(
+                errorWidget: (_, _, _) => Container(
                   width: 48,
                   height: 48,
                   color: isDark ? Colors.white12 : Colors.grey.shade200,
@@ -1377,7 +1372,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
+                placeholder: (_, _) => Container(
                   width: 48,
                   height: 48,
                   color: isDark ? Colors.white12 : Colors.grey.shade200,
@@ -1470,7 +1465,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
+                placeholder: (_, _) => Container(
                   width: 48,
                   height: 48,
                   color: isDark ? Colors.white12 : Colors.grey.shade200,
@@ -1649,8 +1644,6 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
       builder: (context) => const NowPlayingScreen(),
     );
   }
-
-  
 
   void _showCreatePlaylistDialog() {
     final isDark = Theme.of(context).brightness == Brightness.dark;

@@ -18,7 +18,7 @@ class YouTubeMusicService {
     try {
       // Search returns VideoSearchList
       final searchList = await _yt.search.search(query);
-      
+
       final tracks = <models.Track>[];
 
       for (final video in searchList.take(limit)) {
@@ -39,16 +39,16 @@ class YouTubeMusicService {
   }
 
   /// Search specifically for songs/tracks
-  Future<List<models.Track>> searchTracks(String query, {int limit = 20}) async {
+  Future<List<models.Track>> searchTracks(
+    String query, {
+    int limit = 20,
+  }) async {
     if (query.trim().isEmpty) return [];
 
     try {
       final searchList = await _yt.search.search(query);
-      
-      return searchList
-          .take(limit)
-          .map(_videoToTrack)
-          .toList();
+
+      return searchList.take(limit).map(_videoToTrack).toList();
     } catch (e) {
       return [];
     }
@@ -80,23 +80,23 @@ class YouTubeMusicService {
   Future<String?> getStreamUrl(String videoId) async {
     try {
       final manifest = await _yt.videos.streamsClient.getManifest(videoId);
-      
+
       // Prefer audio-only streams for better performance and bandwidth
       final audioStreams = manifest.audioOnly;
-      
+
       if (audioStreams.isNotEmpty) {
         // Get highest bitrate audio stream
         final bestAudio = audioStreams.withHighestBitrate();
         return bestAudio.url.toString();
       }
-      
+
       // Fallback to muxed stream (audio + video, limited to 360p)
       final muxedStreams = manifest.muxed;
       if (muxedStreams.isNotEmpty) {
         final bestMuxed = muxedStreams.withHighestBitrate();
         return bestMuxed.url.toString();
       }
-      
+
       return null;
     } catch (e) {
       return null;
@@ -118,7 +118,7 @@ class YouTubeMusicService {
     try {
       final playlist = await _yt.playlists.get(playlistId);
       final videos = await _yt.playlists.getVideos(playlistId).toList();
-      
+
       return models.Playlist(
         id: playlist.id.value,
         title: playlist.title,
@@ -137,8 +137,11 @@ class YouTubeMusicService {
   Future<models.Artist?> getArtist(String channelId) async {
     try {
       final channel = await _yt.channels.get(channelId);
-      final uploads = await _yt.channels.getUploads(channelId).take(10).toList();
-      
+      final uploads = await _yt.channels
+          .getUploads(channelId)
+          .take(10)
+          .toList();
+
       return models.Artist(
         id: channel.id.value,
         name: channel.title,
@@ -152,20 +155,20 @@ class YouTubeMusicService {
   }
 
   /// Get related/recommended tracks for a video
-  Future<List<models.Track>> getRelatedTracks(String videoId, {int limit = 10}) async {
+  Future<List<models.Track>> getRelatedTracks(
+    String videoId, {
+    int limit = 10,
+  }) async {
     try {
       // First get the video object
       final video = await _yt.videos.get(videoId);
-      
+
       // Then get related videos using the Video object
       final relatedVideos = await _yt.videos.getRelatedVideos(video);
-      
+
       if (relatedVideos == null) return [];
-      
-      return relatedVideos
-          .take(limit)
-          .map(_videoToTrack)
-          .toList();
+
+      return relatedVideos.take(limit).map(_videoToTrack).toList();
     } catch (e) {
       return [];
     }

@@ -40,4 +40,3 @@ class DownloadedPlaylistEntity extends HiveObject {
   }) : createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 }
-

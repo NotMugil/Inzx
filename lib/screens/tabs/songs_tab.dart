@@ -566,9 +566,9 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
                       fit: BoxFit.cover,
                       width: 52,
                       height: 52,
-                      placeholder: (_, __) =>
+                      placeholder: (_, _) =>
                           _defaultArtwork(colorScheme, accentColor),
-                      errorWidget: (_, __, ___) =>
+                      errorWidget: (_, _, _) =>
                           _defaultArtwork(colorScheme, accentColor),
                     )
                   : _defaultArtwork(colorScheme, accentColor),

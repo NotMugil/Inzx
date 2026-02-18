@@ -5,12 +5,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
-import '../../providers/ytmusic_providers.dart';
 import '../../services/download_service.dart';
 import 'track_options_sheet.dart';
 import 'mini_player.dart';
 import 'now_playing_screen.dart';
-import '../../core/design_system/design_system.dart';
 
 // NOTE: We use ytMusicPlaylistProvider from ytmusic_providers.dart
 // which uses the shared innerTubeServiceProvider singleton.
@@ -408,12 +406,12 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                                     ? CachedNetworkImage(
                                         imageUrl: highResThumb,
                                         fit: BoxFit.cover,
-                                        placeholder: (_, __) => Container(
+                                        placeholder: (_, _) => Container(
                                           color: isDark
                                               ? Colors.grey[900]
                                               : Colors.grey[200],
                                         ),
-                                        errorWidget: (_, __, ___) => Container(
+                                        errorWidget: (_, _, _) => Container(
                                           color: isDark
                                               ? Colors.grey[900]
                                               : Colors.grey[200],
@@ -632,7 +630,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                                       fadeInDuration: const Duration(
                                         milliseconds: 150,
                                       ),
-                                      errorWidget: (_, __, ___) => Container(
+                                      errorWidget: (_, _, _) => Container(
                                         color: isDark
                                             ? Colors.grey[800]
                                             : Colors.grey[300],
@@ -741,7 +739,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
 
   void _sharePlaylist(Playlist playlist) {
     final url = 'https://music.youtube.com/playlist?list=${playlist.id}';
-    Share.share('${playlist.title}\n$url', subject: playlist.title);
+    SharePlus.instance.share(ShareParams(text: '${playlist.title}\n$url'));
   }
 
   void _downloadPlaylist(

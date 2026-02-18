@@ -46,7 +46,7 @@ class ThemeSettings {
   Map<String, dynamic> toJson() => {
     'themeMode': themeMode.index,
     'colorSource': colorSource.index,
-    'customAccentColor': customAccentColor?.value,
+    'customAccentColor': customAccentColor?.toARGB32(),
     'usePureBlack': usePureBlack,
     'useHighContrast': useHighContrast,
   };
@@ -205,7 +205,9 @@ ThemeData buildTheme({
 
     // Cards
     cardTheme: CardThemeData(
-      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade100,
+      color: isDark
+          ? Colors.white.withValues(alpha: 0.05)
+          : Colors.grey.shade100,
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),

@@ -4,7 +4,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
-import '../../providers/ytmusic_providers.dart';
 
 /// Playlist picker sheet for adding tracks to playlists
 class PlaylistPickerSheet extends ConsumerStatefulWidget {
@@ -290,9 +289,12 @@ class _PlaylistPickerSheetState extends ConsumerState<PlaylistPickerSheet> {
       final playlistAction = ref.read(ytMusicPlaylistActionProvider);
       try {
         final playlistId = await playlistAction.create(name);
-        if (playlistId != null && mounted) {
+        if (!mounted) return;
+
+        if (playlistId != null) {
           // Add track to the newly created playlist
           await playlistAction.addSong(playlistId, widget.track.id);
+          if (!mounted) return;
           // Refresh playlists list
           ref.invalidate(ytMusicSavedPlaylistsProvider);
           Navigator.pop(context);
@@ -303,7 +305,7 @@ class _PlaylistPickerSheetState extends ConsumerState<PlaylistPickerSheet> {
               ),
             ),
           );
-        } else if (mounted) {
+        } else {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Failed to create playlist')),

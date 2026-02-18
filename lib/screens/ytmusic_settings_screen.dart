@@ -8,7 +8,6 @@ import '../providers/providers.dart';
 import '../providers/repository_providers.dart';
 import '../services/auth/google_auth_service.dart';
 import '../services/ytmusic_sync_service.dart';
-import '../services/album_color_extractor.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 import '../../core/providers/theme_provider.dart';
 import 'ytmusic_login_screen.dart';
@@ -896,7 +895,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
                 ? CachedNetworkImage(
                     imageUrl: user.photoUrl!,
                     fit: BoxFit.cover,
-                    placeholder: (_, __) => Center(
+                    placeholder: (_, _) => Center(
                       child: Text(
                         user.initials,
                         style: TextStyle(
@@ -906,7 +905,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
                         ),
                       ),
                     ),
-                    errorWidget: (_, __, ___) => Center(
+                    errorWidget: (_, _, _) => Center(
                       child: Text(
                         user.initials,
                         style: TextStyle(
@@ -995,7 +994,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
               'https://www.google.com/favicon.ico',
               width: 18,
               height: 18,
-              errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 18),
+              errorBuilder: (_, _, _) => const Icon(Icons.person, size: 18),
             ),
             label: const Text('Sign in with Google'),
             style: OutlinedButton.styleFrom(
@@ -1391,7 +1390,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
               likedSongs.when(
                 data: (s) => '${s.length}',
                 loading: () => '…',
-                error: (_, __) => '-',
+                error: (_, _) => '-',
               ),
             ),
             _libraryStat(
@@ -1400,7 +1399,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
               savedAlbums.when(
                 data: (a) => '${a.length}',
                 loading: () => '…',
-                error: (_, __) => '-',
+                error: (_, _) => '-',
               ),
             ),
             _libraryStat(
@@ -1409,7 +1408,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
               savedPlaylists.when(
                 data: (p) => '${p.length}',
                 loading: () => '…',
-                error: (_, __) => '-',
+                error: (_, _) => '-',
               ),
             ),
             _libraryStat(
@@ -1418,7 +1417,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
               subscribedArtists.when(
                 data: (a) => '${a.length}',
                 loading: () => '…',
-                error: (_, __) => '-',
+                error: (_, _) => '-',
               ),
             ),
           ],

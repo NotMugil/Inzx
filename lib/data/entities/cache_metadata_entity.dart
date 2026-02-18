@@ -4,6 +4,7 @@ part 'cache_metadata_entity.g.dart';
 
 @HiveType(typeId: 3)
 class CacheMetadataEntity extends HiveObject {
+  @override
   @HiveField(0)
   late String key; // Cache key (e.g., "search:hello", "trending", "liked_songs")
 

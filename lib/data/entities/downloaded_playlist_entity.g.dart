@@ -61,4 +61,3 @@ class DownloadedPlaylistEntityAdapter
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
-

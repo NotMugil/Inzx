@@ -234,33 +234,45 @@ class BrowseMoodsScreen extends ConsumerWidget {
 
   Color _getMoodColor(String title) {
     final lowerTitle = title.toLowerCase();
-    if (lowerTitle.contains('chill') || lowerTitle.contains('relax'))
+    if (lowerTitle.contains('chill') || lowerTitle.contains('relax')) {
       return Colors.blue;
-    if (lowerTitle.contains('party') || lowerTitle.contains('dance'))
+    }
+    if (lowerTitle.contains('party') || lowerTitle.contains('dance')) {
       return Colors.pink;
-    if (lowerTitle.contains('workout') || lowerTitle.contains('energy'))
+    }
+    if (lowerTitle.contains('workout') || lowerTitle.contains('energy')) {
       return Colors.orange;
-    if (lowerTitle.contains('focus') || lowerTitle.contains('study'))
+    }
+    if (lowerTitle.contains('focus') || lowerTitle.contains('study')) {
       return Colors.purple;
-    if (lowerTitle.contains('sleep') || lowerTitle.contains('meditation'))
+    }
+    if (lowerTitle.contains('sleep') || lowerTitle.contains('meditation')) {
       return Colors.indigo;
-    if (lowerTitle.contains('happy') || lowerTitle.contains('feel good'))
+    }
+    if (lowerTitle.contains('happy') || lowerTitle.contains('feel good')) {
       return Colors.amber.shade700;
-    if (lowerTitle.contains('sad') || lowerTitle.contains('melanchol'))
+    }
+    if (lowerTitle.contains('sad') || lowerTitle.contains('melanchol')) {
       return Colors.blueGrey;
-    if (lowerTitle.contains('romance') || lowerTitle.contains('love'))
+    }
+    if (lowerTitle.contains('romance') || lowerTitle.contains('love')) {
       return Colors.red;
-    if (lowerTitle.contains('rock') || lowerTitle.contains('metal'))
+    }
+    if (lowerTitle.contains('rock') || lowerTitle.contains('metal')) {
       return Colors.grey.shade800;
-    if (lowerTitle.contains('hip') || lowerTitle.contains('rap'))
+    }
+    if (lowerTitle.contains('hip') || lowerTitle.contains('rap')) {
       return Colors.amber.shade800;
+    }
     if (lowerTitle.contains('pop')) return Colors.teal;
-    if (lowerTitle.contains('jazz') || lowerTitle.contains('blues'))
+    if (lowerTitle.contains('jazz') || lowerTitle.contains('blues')) {
       return Colors.brown;
+    }
     if (lowerTitle.contains('country')) return Colors.green.shade700;
     if (lowerTitle.contains('classical')) return Colors.deepPurple;
-    if (lowerTitle.contains('electronic') || lowerTitle.contains('edm'))
+    if (lowerTitle.contains('electronic') || lowerTitle.contains('edm')) {
       return Colors.cyan;
+    }
     if (lowerTitle.contains('indie')) return Colors.lime.shade700;
     if (lowerTitle.contains('k-pop')) return Colors.pink.shade300;
     if (lowerTitle.contains('latin')) return Colors.red.shade400;

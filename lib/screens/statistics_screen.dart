@@ -209,7 +209,10 @@ class StatisticsScreen extends ConsumerWidget {
               color: Colors.white,
             ),
           ),
-          Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.8))),
+          Text(
+            label,
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+          ),
         ],
       ),
     );
@@ -242,7 +245,9 @@ class StatisticsScreen extends ConsumerWidget {
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.white,
               borderRadius: BorderRadius.circular(12),
             ),
             child: ListTile(
@@ -321,7 +326,7 @@ class StatisticsScreen extends ConsumerWidget {
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }

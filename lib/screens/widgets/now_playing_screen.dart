@@ -5,15 +5,12 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:just_audio/just_audio.dart';
 import 'package:marquee/marquee.dart';
 import '../../providers/providers.dart';
-import '../../providers/jams_provider.dart';
 import '../../services/jams/jams_models.dart';
 import '../../services/download_service.dart';
 import '../../models/models.dart';
 import '../../services/audio_player_service.dart' as player;
-import '../../services/album_color_extractor.dart';
 import '../../services/lyrics/lyrics_service.dart';
 import '../../services/lyrics/lyrics_models.dart';
 import '../../core/design_system/colors.dart';
@@ -382,7 +379,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
       },
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
@@ -862,7 +859,7 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
                   onReorder: canControlPlayback
                       ? (oldIndex, newIndex) =>
                             _reorderJamQueue(oldIndex, newIndex)
-                      : (_, __) {},
+                      : (_, _) {},
                   buildDefaultDragHandles: false,
                   itemBuilder: (context, index) {
                     final queueItem = jamQueue[index];

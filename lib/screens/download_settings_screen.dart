@@ -5,7 +5,6 @@ import '../../core/design_system/design_system.dart';
 import '../providers/providers.dart';
 import '../services/playback/playback_data.dart';
 import '../services/download_service.dart';
-import '../services/album_color_extractor.dart';
 
 /// Download settings screen — quality, location, and data usage
 class DownloadSettingsScreen extends ConsumerWidget {

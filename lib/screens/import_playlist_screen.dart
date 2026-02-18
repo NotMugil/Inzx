@@ -19,8 +19,8 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
   List<Playlist> _ytmPlaylists = [];
   bool _isLoading = true;
   String? _error;
-  Set<String> _importing = {};
-  Set<String> _imported = {};
+  final Set<String> _importing = {};
+  final Set<String> _imported = {};
 
   @override
   void initState() {

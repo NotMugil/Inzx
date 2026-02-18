@@ -82,9 +82,9 @@ class HomeShelfItem extends Equatable {
     if (subtitle == null || subtitle.isEmpty) return Duration.zero;
 
     // Match m:ss or h:mm:ss anywhere in subtitle.
-    final match = RegExp(r'(?:(\d{1,2}):)?(\d{1,2}):(\d{2})').firstMatch(
-      subtitle,
-    );
+    final match = RegExp(
+      r'(?:(\d{1,2}):)?(\d{1,2}):(\d{2})',
+    ).firstMatch(subtitle);
     if (match == null) return Duration.zero;
 
     final hours = match.group(1) != null ? int.parse(match.group(1)!) : 0;

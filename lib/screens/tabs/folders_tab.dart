@@ -437,7 +437,8 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
               Navigator.pop(context);
               // Always open settings since Android won't re-show permission dialog
               final opened = await LocalMusicScanner.openSettings();
-              if (!opened && mounted) {
+              if (!opened) {
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(

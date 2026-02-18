@@ -1,5 +1,6 @@
 /// OuterTune-style playback data model
 /// Separates metadata from playback data for resilience
+library;
 
 /// Audio quality preference
 /// Note: YT Music max is typically ~256kbps AAC or ~160kbps Opus

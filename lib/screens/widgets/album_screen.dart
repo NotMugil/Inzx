@@ -5,13 +5,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/models.dart';
 import '../../providers/providers.dart';
-import '../../providers/ytmusic_providers.dart';
 import '../../services/download_service.dart';
 import 'track_options_sheet.dart';
 import 'mini_player.dart';
 import 'now_playing_screen.dart';
 import '../../services/album_color_extractor.dart';
-import 'package:flutter/services.dart';
 
 // Provider for extracting album colors
 final albumColorsProvider = FutureProvider.family<AlbumColors, String>((
@@ -277,12 +275,12 @@ class AlbumScreen extends ConsumerWidget {
                                   ? CachedNetworkImage(
                                       imageUrl: highResThumb,
                                       fit: BoxFit.cover,
-                                      placeholder: (_, __) => Container(
+                                      placeholder: (_, _) => Container(
                                         color: isDark
                                             ? Colors.grey[900]
                                             : Colors.grey[200],
                                       ),
-                                      errorWidget: (_, __, ___) => Container(
+                                      errorWidget: (_, _, _) => Container(
                                         color: isDark
                                             ? Colors.grey[900]
                                             : Colors.grey[200],
@@ -598,9 +596,8 @@ class AlbumScreen extends ConsumerWidget {
   /// Share album link
   void _shareAlbum(Album album) {
     final url = 'https://music.youtube.com/playlist?list=${album.id}';
-    Share.share(
-      '${album.title} by ${album.artist}\n$url',
-      subject: album.title,
+    SharePlus.instance.share(
+      ShareParams(text: '${album.title} by ${album.artist}\n$url'),
     );
   }
 
@@ -682,7 +679,7 @@ class AlbumScreen extends ConsumerWidget {
                   ),
                 ),
                 subtitle: Text(
-                  album.artist ?? '',
+                  album.artist,
                   style: TextStyle(
                     color: isDark
                         ? Colors.white54

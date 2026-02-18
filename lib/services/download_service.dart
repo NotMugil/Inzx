@@ -277,7 +277,8 @@ class _DownloadCancelledException implements Exception {
 }
 
 class DownloadParallelPartCountNotifier extends StateNotifier<int> {
-  DownloadParallelPartCountNotifier() : super(kDefaultParallelDownloadPartCount) {
+  DownloadParallelPartCountNotifier()
+    : super(kDefaultParallelDownloadPartCount) {
     _load();
   }
 
@@ -304,7 +305,8 @@ class DownloadParallelPartCountNotifier extends StateNotifier<int> {
 }
 
 class DownloadParallelMinSizeMbNotifier extends StateNotifier<int> {
-  DownloadParallelMinSizeMbNotifier() : super(kDefaultParallelDownloadMinSizeMb) {
+  DownloadParallelMinSizeMbNotifier()
+    : super(kDefaultParallelDownloadMinSizeMb) {
     _load();
   }
 
@@ -1248,7 +1250,9 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
           }
 
           if (kDebugMode) {
-            print('DownloadService: Initial download got $totalDownloaded bytes');
+            print(
+              'DownloadService: Initial download got $totalDownloaded bytes',
+            );
           }
 
           int rangeAttempts = 0;
@@ -1475,7 +1479,8 @@ class DownloadManagerNotifier extends StateNotifier<DownloadManagerState> {
       _transientRetryAttempts.remove(task.trackId);
 
       final currentTask = state.tasks[task.trackId];
-      if (currentTask != null && currentTask.status != DownloadStatus.cancelled) {
+      if (currentTask != null &&
+          currentTask.status != DownloadStatus.cancelled) {
         _updateTask(
           task.trackId,
           task.copyWith(status: DownloadStatus.cancelled, error: null),

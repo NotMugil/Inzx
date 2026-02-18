@@ -409,10 +409,10 @@ class _ArtistContent extends ConsumerWidget {
                         'w400-h400',
                       ),
                       fit: BoxFit.cover,
-                      placeholder: (_, __) => Container(
+                      placeholder: (_, _) => Container(
                         color: isDark ? Colors.grey[900] : Colors.grey[200],
                       ),
-                      errorWidget: (_, __, ___) => Container(
+                      errorWidget: (_, _, _) => Container(
                         color: isDark ? Colors.grey[900] : Colors.grey[200],
                       ),
                     )

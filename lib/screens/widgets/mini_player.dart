@@ -180,9 +180,9 @@ class MusicMiniPlayer extends ConsumerWidget {
                                     ? CachedNetworkImage(
                                         imageUrl: track.thumbnailUrl!,
                                         fit: BoxFit.cover,
-                                        placeholder: (_, __) =>
+                                        placeholder: (_, _) =>
                                             _defaultArt(colorScheme),
-                                        errorWidget: (_, __, ___) =>
+                                        errorWidget: (_, _, _) =>
                                             _defaultArt(colorScheme),
                                       )
                                     : _defaultArt(colorScheme),
@@ -283,7 +283,7 @@ class MusicMiniPlayer extends ConsumerWidget {
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 

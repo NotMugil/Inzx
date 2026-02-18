@@ -24,7 +24,9 @@ class LRCLibProvider implements LyricsProvider {
       result = await _searchFuzzy(info);
       return result;
     } catch (e) {
-      if (kDebugMode) {print('LRCLib error: $e');}
+      if (kDebugMode) {
+        print('LRCLib error: $e');
+      }
       return null;
     }
   }
