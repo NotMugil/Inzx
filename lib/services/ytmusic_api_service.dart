@@ -169,6 +169,8 @@ class InnerTubeService {
     // Use the special "LM" playlist ID for liked songs - this is more reliable
     // than the FEmusic_liked_videos browse endpoint
     final allTracks = <Track>[];
+    final seenTrackIds = <String>{};
+    final seenContinuations = <String>{};
     String? continuation;
 
     // First request - get playlist with VL prefix
@@ -185,17 +187,21 @@ class InnerTubeService {
 
     // Parse first page and get continuation
     final (tracks, cont) = _parseLikedSongsPlaylist(response);
-    allTracks.addAll(tracks);
+    for (final track in tracks) {
+      if (seenTrackIds.add(track.id)) {
+        allTracks.add(track);
+      }
+    }
     continuation = cont;
     if (kDebugMode) {
       print(
-        'LikedSongs: First page: ${tracks.length} songs, continuation: ${cont != null}',
+        'LikedSongs: First page: ${tracks.length} songs (${allTracks.length} unique), continuation: ${cont != null}',
       );
     }
 
     // Fetch remaining pages
     int pageNum = 1;
-    while (continuation != null) {
+    while (continuation != null && seenContinuations.add(continuation)) {
       pageNum++;
       final contResponse = await _request('browse', {
         'continuation': continuation,
@@ -209,16 +215,30 @@ class InnerTubeService {
       }
 
       final (moreTracks, nextCont) = _parseLikedSongsContinuation(contResponse);
-      allTracks.addAll(moreTracks);
+      var added = 0;
+      for (final track in moreTracks) {
+        if (seenTrackIds.add(track.id)) {
+          allTracks.add(track);
+          added++;
+        }
+      }
       if (kDebugMode) {
         print(
-          'LikedSongs: Page $pageNum: ${moreTracks.length} songs, continuation: ${nextCont != null}',
+          'LikedSongs: Page $pageNum: ${moreTracks.length} songs ($added new), continuation: ${nextCont != null}',
         );
       }
       continuation = nextCont;
 
       // Safety limit to prevent infinite loops
       if (allTracks.length > 5000) break;
+    }
+
+    // Fallback path if the primary endpoint returned nothing useful.
+    if (allTracks.isEmpty) {
+      if (kDebugMode) {
+        print('LikedSongs: Primary path returned 0 tracks, trying fallback...');
+      }
+      return _getLikedSongsFallback();
     }
 
     if (kDebugMode) {
@@ -235,11 +255,42 @@ class InnerTubeService {
 
     if (response == null) return [];
 
-    final (tracks, _) = _parseLibraryTracksWithContinuation(response);
-    if (kDebugMode) {
-      print('LikedSongs Fallback: Got ${tracks.length} songs');
+    final allTracks = <Track>[];
+    final seenTrackIds = <String>{};
+    final seenContinuations = <String>{};
+
+    final (tracks, initialContinuation) = _parseLibraryTracksWithContinuation(
+      response,
+    );
+    for (final track in tracks) {
+      if (seenTrackIds.add(track.id)) {
+        allTracks.add(track);
+      }
     }
-    return tracks;
+
+    var continuation = initialContinuation;
+    while (continuation != null && seenContinuations.add(continuation)) {
+      final contResponse = await _request('browse', {
+        'continuation': continuation,
+      }, authenticated: true);
+      if (contResponse == null) break;
+
+      final (moreTracks, nextContinuation) = _parseLibraryContinuation(
+        contResponse,
+      );
+      for (final track in moreTracks) {
+        if (seenTrackIds.add(track.id)) {
+          allTracks.add(track);
+        }
+      }
+      continuation = nextContinuation;
+      if (allTracks.length > 5000) break;
+    }
+
+    if (kDebugMode) {
+      print('LikedSongs Fallback: Got ${allTracks.length} songs');
+    }
+    return allTracks;
   }
 
   /// Parse liked songs from VLLM playlist response
@@ -332,16 +383,16 @@ class InnerTubeService {
             'LikedSongs: sectionListRenderer keys: ${sectionListRenderer.keys.toList()}',
           );
         }
-        final continuations = sectionListRenderer['continuations'] as List?;
-        if (continuations != null && continuations.isNotEmpty) {
+        final cont = _extractContinuationToken(
+          sectionListRenderer['continuations'],
+        );
+        if (cont != null) {
           if (kDebugMode) {
             print(
               'LikedSongs: Found continuation at sectionListRenderer level',
             );
           }
-          continuation =
-              continuations[0]['nextContinuationData']?['continuation']
-                  as String?;
+          continuation = cont;
         }
       }
 
@@ -446,22 +497,26 @@ class InnerTubeService {
         if (kDebugMode) {
           print('LikedSongs: shelf keys: ${shelf.keys.toList()}');
         }
-        final continuations = shelf['continuations'] as List?;
-        if (continuations != null && continuations.isNotEmpty) {
+        final cont = _extractContinuationToken(shelf['continuations']);
+        if (cont != null) {
           if (kDebugMode) {
-            print(
-              'LikedSongs: continuations[0] keys: ${(continuations[0] as Map).keys.toList()}',
-            );
+            final conts = shelf['continuations'] as List?;
+            if (conts != null && conts.isNotEmpty) {
+              print(
+                'LikedSongs: continuations[0] keys: ${(conts[0] as Map).keys.toList()}',
+              );
+            }
           }
-          continuation =
-              continuations[0]['nextContinuationData']?['continuation']
-                  as String?;
+          continuation = cont;
         } else {
           if (kDebugMode) {
             print('LikedSongs: No continuations array in shelf');
           }
         }
       }
+
+      // Some responses place continuation token as continuationItemRenderer.
+      continuation ??= _extractContinuationToken(contents);
 
       if (contents != null) {
         for (final item in contents) {
@@ -486,6 +541,8 @@ class InnerTubeService {
     String? continuation;
 
     try {
+      List? items;
+
       // Try musicPlaylistShelfContinuation
       var continuationContents =
           response['continuationContents']?['musicPlaylistShelfContinuation'];
@@ -494,25 +551,77 @@ class InnerTubeService {
       continuationContents ??=
           response['continuationContents']?['musicShelfContinuation'];
 
-      if (continuationContents == null) {
+      if (continuationContents != null) {
+        items = continuationContents['contents'] as List?;
+      }
+
+      // Some browse continuations return items via appendContinuationItemsAction.
+      items ??=
+          _navigateJson(response, [
+                'onResponseReceivedActions',
+                0,
+                'appendContinuationItemsAction',
+                'continuationItems',
+              ])
+              as List?;
+      items ??=
+          _navigateJson(response, [
+                'onResponseReceivedEndpoints',
+                0,
+                'appendContinuationItemsAction',
+                'continuationItems',
+              ])
+              as List?;
+
+      if (items == null) {
         return _parseLibraryContinuation(response);
       }
 
-      final items = continuationContents['contents'] as List?;
-      if (items != null) {
-        for (final item in items) {
-          final track = _parseTrackItem(item);
-          if (track != null) tracks.add(track);
+      for (final item in items) {
+        // Standard continuation item
+        var track = _parseTrackItem(item);
+        if (track != null) {
+          tracks.add(track);
+          continue;
+        }
+
+        // Wrapped continuation item shape
+        final renderer = item['musicResponsiveListItemRenderer'];
+        if (renderer != null) {
+          track = _parseTrackItem({
+            'musicResponsiveListItemRenderer': renderer,
+          });
+          if (track != null) {
+            tracks.add(track);
+          }
+        }
+
+        // Nested shelf continuation shape
+        final shelfItems =
+            item['musicPlaylistShelfRenderer']?['contents'] as List?;
+        if (shelfItems != null) {
+          for (final shelfItem in shelfItems) {
+            final shelfTrack = _parseTrackItem(shelfItem);
+            if (shelfTrack != null) {
+              tracks.add(shelfTrack);
+            }
+          }
         }
       }
 
       // Get next continuation token
-      final continuations = continuationContents['continuations'] as List?;
-      if (continuations != null && continuations.isNotEmpty) {
-        continuation =
-            continuations[0]['nextContinuationData']?['continuation']
-                as String?;
+      if (continuationContents != null) {
+        continuation = _extractContinuationToken(
+          continuationContents['continuations'],
+        );
       }
+      continuation ??= _extractContinuationToken(items);
+      continuation ??= _extractContinuationToken(
+        response['onResponseReceivedActions'],
+      );
+      continuation ??= _extractContinuationToken(
+        response['onResponseReceivedEndpoints'],
+      );
     } catch (e) {
       if (kDebugMode) {
         print('Error parsing liked songs continuation: $e');
@@ -520,6 +629,66 @@ class InnerTubeService {
     }
 
     return (tracks, continuation);
+  }
+
+  /// Extract continuation token from known YouTube continuation shapes.
+  String? _extractContinuationToken(dynamic node) {
+    if (node is List) {
+      for (final item in node) {
+        final token = _extractContinuationToken(item);
+        if (token != null && token.isNotEmpty) return token;
+      }
+      return null;
+    }
+
+    if (node is! Map) return null;
+
+    final nextContinuationData = node['nextContinuationData'];
+    if (nextContinuationData is Map) {
+      final token = nextContinuationData['continuation'] as String?;
+      if (token != null && token.isNotEmpty) return token;
+    }
+
+    final reloadContinuationData = node['reloadContinuationData'];
+    if (reloadContinuationData is Map) {
+      final token = reloadContinuationData['continuation'] as String?;
+      if (token != null && token.isNotEmpty) return token;
+    }
+
+    final continuationCommand = node['continuationCommand'];
+    if (continuationCommand is Map) {
+      final token = continuationCommand['token'] as String?;
+      if (token != null && token.isNotEmpty) return token;
+    }
+
+    final continuationEndpoint = node['continuationEndpoint'];
+    if (continuationEndpoint != null) {
+      final token = _extractContinuationToken(continuationEndpoint);
+      if (token != null && token.isNotEmpty) return token;
+    }
+
+    final continuationItemRenderer = node['continuationItemRenderer'];
+    if (continuationItemRenderer != null) {
+      final token = _extractContinuationToken(continuationItemRenderer);
+      if (token != null && token.isNotEmpty) return token;
+    }
+
+    final continuations = node['continuations'];
+    if (continuations != null) {
+      final token = _extractContinuationToken(continuations);
+      if (token != null && token.isNotEmpty) return token;
+    }
+
+    // appendContinuationItemsAction shape
+    final appendAction = node['appendContinuationItemsAction'];
+    if (appendAction is Map) {
+      final token = _extractContinuationToken(
+        appendAction['continuationItems'],
+      );
+      if (token != null && token.isNotEmpty) return token;
+    }
+
+    return null;
   }
 
   /// Get user's library songs (uploaded/private)

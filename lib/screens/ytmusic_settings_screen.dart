@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:flutter/foundation.dart' show debugPrint, kReleaseMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -1541,7 +1541,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
     );
 
     if (result == true) {
-      ref.invalidate(ytMusicLikedSongsProvider);
+      await _refreshLikedSongsWithLog(reason: 'login');
       ref.invalidate(ytMusicSavedAlbumsProvider);
       ref.invalidate(ytMusicSavedPlaylistsProvider);
       ref.invalidate(ytMusicSubscribedArtistsProvider);
@@ -1560,7 +1560,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
     });
 
     if (result.success) {
-      ref.invalidate(ytMusicLikedSongsProvider);
+      await _refreshLikedSongsWithLog(reason: 'sync');
       ref.invalidate(ytMusicSavedAlbumsProvider);
       ref.invalidate(ytMusicSavedPlaylistsProvider);
       ref.invalidate(ytMusicSubscribedArtistsProvider);
@@ -1599,6 +1599,22 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
     if (confirmed == true) {
       await ref.read(ytMusicAuthStateProvider.notifier).logout();
       await ref.read(ytMusicSyncServiceProvider).clearCache();
+    }
+  }
+
+  Future<void> _refreshLikedSongsWithLog({required String reason}) async {
+    try {
+      final songs = await ref.refresh(ytMusicLikedSongsProvider.future);
+      if (!kReleaseMode) {
+        debugPrint(
+          'YTMusicSettings: liked songs refreshed ($reason) -> ${songs.length} tracks',
+        );
+      }
+    } catch (e) {
+      if (!kReleaseMode) {
+        debugPrint('YTMusicSettings: liked songs refresh failed ($reason): $e');
+      }
+      ref.invalidate(ytMusicLikedSongsProvider);
     }
   }
 
