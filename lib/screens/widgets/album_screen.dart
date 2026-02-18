@@ -64,7 +64,7 @@ class AlbumScreen extends ConsumerWidget {
     final playerService = ref.read(audioPlayerServiceProvider);
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: isDark ? Colors.black : colorScheme.surface,
       body: albumAsync.when(
         loading: () =>
             _buildLoadingState(albumTitle, thumbnailUrl, isDark, colorScheme),
@@ -223,14 +223,20 @@ class AlbumScreen extends ConsumerWidget {
                     elevation: 0,
                     pinned: false,
                     leading: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      icon: Icon(
+                        Icons.arrow_back,
+                        color: isDark ? Colors.white : colorScheme.onSurface,
+                      ),
                       onPressed: () {
                         if (context != null) Navigator.pop(context);
                       },
                     ),
                     actions: [
                       IconButton(
-                        icon: const Icon(Icons.search, color: Colors.white),
+                        icon: Icon(
+                          Icons.search,
+                          color: isDark ? Colors.white : colorScheme.onSurface,
+                        ),
                         onPressed: () {
                           // TODO: Navigate to Search Screen
                           // For now, we pop to root as a fallback if no dedicated search screen
@@ -271,16 +277,26 @@ class AlbumScreen extends ConsumerWidget {
                                   ? CachedNetworkImage(
                                       imageUrl: highResThumb,
                                       fit: BoxFit.cover,
-                                      placeholder: (_, __) =>
-                                          Container(color: Colors.grey[900]),
-                                      errorWidget: (_, __, ___) =>
-                                          Container(color: Colors.grey[900]),
+                                      placeholder: (_, __) => Container(
+                                        color: isDark
+                                            ? Colors.grey[900]
+                                            : Colors.grey[200],
+                                      ),
+                                      errorWidget: (_, __, ___) => Container(
+                                        color: isDark
+                                            ? Colors.grey[900]
+                                            : Colors.grey[200],
+                                      ),
                                     )
                                   : Container(
-                                      color: Colors.grey[900],
-                                      child: const Icon(
+                                      color: isDark
+                                          ? Colors.grey[900]
+                                          : Colors.grey[200],
+                                      child: Icon(
                                         Icons.album,
-                                        color: Colors.white,
+                                        color: isDark
+                                            ? Colors.white
+                                            : colorScheme.onSurface,
                                         size: 80,
                                       ),
                                     ),
@@ -292,8 +308,10 @@ class AlbumScreen extends ConsumerWidget {
                           Text(
                             album.title,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white
+                                  : colorScheme.onSurface,
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
                               letterSpacing: -0.5,
@@ -305,8 +323,12 @@ class AlbumScreen extends ConsumerWidget {
                           Text(
                             '${album.artist}${album.year != null ? ' • ${album.year}' : ''}',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white70,
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white70
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.7,
+                                    ),
                               fontSize: 16,
                             ),
                           ),
@@ -324,8 +346,12 @@ class AlbumScreen extends ConsumerWidget {
                                 textAlign: TextAlign.center,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: Colors.white54,
+                                style: TextStyle(
+                                  color: isDark
+                                      ? Colors.white54
+                                      : colorScheme.onSurface.withValues(
+                                          alpha: 0.54,
+                                        ),
                                   fontSize: 14,
                                 ),
                               ),
@@ -336,23 +362,33 @@ class AlbumScreen extends ConsumerWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
-                              _buildCircleButton(Icons.download_rounded, () {
-                                if (context != null && tracks.isNotEmpty) {
-                                  _downloadAlbum(context, ref, album, tracks);
-                                }
-                              }),
-                              _buildCircleButton(Icons.shuffle_rounded, () {
-                                if (playerService != null &&
-                                    tracks.isNotEmpty) {
-                                  final shuffled = List<Track>.from(tracks)
-                                    ..shuffle();
-                                  playerService.playQueue(
-                                    shuffled,
-                                    startIndex: 0,
-                                    sourceId: album.id,
-                                  );
-                                }
-                              }),
+                              _buildCircleButton(
+                                Icons.download_rounded,
+                                () {
+                                  if (context != null && tracks.isNotEmpty) {
+                                    _downloadAlbum(context, ref, album, tracks);
+                                  }
+                                },
+                                isDark: isDark,
+                                colorScheme: colorScheme,
+                              ),
+                              _buildCircleButton(
+                                Icons.shuffle_rounded,
+                                () {
+                                  if (playerService != null &&
+                                      tracks.isNotEmpty) {
+                                    final shuffled = List<Track>.from(tracks)
+                                      ..shuffle();
+                                    playerService.playQueue(
+                                      shuffled,
+                                      startIndex: 0,
+                                      sourceId: album.id,
+                                    );
+                                  }
+                                },
+                                isDark: isDark,
+                                colorScheme: colorScheme,
+                              ),
 
                               // Play Button
                               Container(
@@ -385,20 +421,30 @@ class AlbumScreen extends ConsumerWidget {
                                 ),
                               ),
 
-                              _buildCircleButton(Icons.share_outlined, () {
-                                _shareAlbum(album);
-                              }),
-                              _buildCircleButton(Icons.more_vert_rounded, () {
-                                if (context != null) {
-                                  _showAlbumOptions(
-                                    context,
-                                    ref,
-                                    album,
-                                    tracks,
-                                    playerService,
-                                  );
-                                }
-                              }),
+                              _buildCircleButton(
+                                Icons.share_outlined,
+                                () {
+                                  _shareAlbum(album);
+                                },
+                                isDark: isDark,
+                                colorScheme: colorScheme,
+                              ),
+                              _buildCircleButton(
+                                Icons.more_vert_rounded,
+                                () {
+                                  if (context != null) {
+                                    _showAlbumOptions(
+                                      context,
+                                      ref,
+                                      album,
+                                      tracks,
+                                      playerService,
+                                    );
+                                  }
+                                },
+                                isDark: isDark,
+                                colorScheme: colorScheme,
+                              ),
                             ],
                           ),
                           const SizedBox(height: 32),
@@ -409,17 +455,23 @@ class AlbumScreen extends ConsumerWidget {
 
                   // Tracks List
                   if (isLoading)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       child: Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+                        child: CircularProgressIndicator(
+                          color: isDark ? Colors.white : colorScheme.onSurface,
+                        ),
                       ),
                     )
                   else if (tracks.isEmpty)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       child: Center(
                         child: Text(
                           'No tracks found',
-                          style: TextStyle(color: Colors.white54),
+                          style: TextStyle(
+                            color: isDark
+                                ? Colors.white54
+                                : colorScheme.onSurface.withValues(alpha: 0.54),
+                          ),
                         ),
                       ),
                     )
@@ -436,13 +488,17 @@ class AlbumScreen extends ConsumerWidget {
                             vertical: 4,
                           ),
                           selected: isTrackPlaying,
-                          selectedTileColor: Colors.white.withValues(
-                            alpha: 0.1,
-                          ),
+                          selectedTileColor:
+                              (isDark ? Colors.white : colorScheme.onSurface)
+                                  .withValues(alpha: 0.1),
                           leading: Text(
                             '${index + 1}',
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white54
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.54,
+                                    ),
                               fontSize: 14,
                             ),
                           ),
@@ -453,7 +509,9 @@ class AlbumScreen extends ConsumerWidget {
                             style: TextStyle(
                               color: isTrackPlaying
                                   ? primaryColor
-                                  : Colors.white,
+                                  : (isDark
+                                        ? Colors.white
+                                        : colorScheme.onSurface),
                               fontSize: 16,
                               fontWeight: isTrackPlaying
                                   ? FontWeight.bold
@@ -467,14 +525,22 @@ class AlbumScreen extends ConsumerWidget {
                             style: TextStyle(
                               color: isTrackPlaying
                                   ? primaryColor.withValues(alpha: 0.7)
-                                  : Colors.white60,
+                                  : (isDark
+                                        ? Colors.white60
+                                        : colorScheme.onSurface.withValues(
+                                            alpha: 0.6,
+                                          )),
                               fontSize: 14,
                             ),
                           ),
                           trailing: IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.more_vert,
-                              color: Colors.white54,
+                              color: isDark
+                                  ? Colors.white54
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.54,
+                                    ),
                             ),
                             onPressed: () =>
                                 TrackOptionsSheet.show(context, track),
@@ -506,16 +572,23 @@ class AlbumScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildCircleButton(IconData icon, VoidCallback onTap) {
+  Widget _buildCircleButton(
+    IconData icon,
+    VoidCallback onTap, {
+    required bool isDark,
+    required ColorScheme colorScheme,
+  }) {
     return Container(
       height: 48,
       width: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: 0.1),
+        color: (isDark ? Colors.white : colorScheme.onSurface).withValues(
+          alpha: 0.1,
+        ),
       ),
       child: IconButton(
-        icon: Icon(icon, color: Colors.white),
+        icon: Icon(icon, color: isDark ? Colors.white : colorScheme.onSurface),
         iconSize: 24,
         onPressed: onTap,
       ),
@@ -562,9 +635,11 @@ class AlbumScreen extends ConsumerWidget {
     List<Track> tracks,
     dynamic playerService,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey[900],
+      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[200],
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -579,7 +654,7 @@ class AlbumScreen extends ConsumerWidget {
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[700],
+                  color: isDark ? Colors.grey[700] : Colors.grey[400],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -594,27 +669,38 @@ class AlbumScreen extends ConsumerWidget {
                             imageUrl: album.thumbnailUrl!,
                             fit: BoxFit.cover,
                           )
-                        : Container(color: Colors.grey[800]),
+                        : Container(
+                            color: isDark ? Colors.grey[800] : Colors.grey[300],
+                          ),
                   ),
                 ),
                 title: Text(
                   album.title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 subtitle: Text(
                   album.artist ?? '',
-                  style: const TextStyle(color: Colors.white54),
+                  style: TextStyle(
+                    color: isDark
+                        ? Colors.white54
+                        : colorScheme.onSurface.withValues(alpha: 0.54),
+                  ),
                 ),
               ),
-              const Divider(color: Colors.grey),
+              Divider(color: isDark ? Colors.grey : Colors.grey[300]),
               ListTile(
-                leading: const Icon(Icons.play_arrow, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.play_arrow,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Play',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -628,10 +714,15 @@ class AlbumScreen extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.shuffle, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.shuffle,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Shuffle',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -646,10 +737,15 @@ class AlbumScreen extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.playlist_add, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.playlist_add,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Add to queue',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -666,10 +762,15 @@ class AlbumScreen extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.download, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.download,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Download album',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -677,10 +778,15 @@ class AlbumScreen extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.share, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.share,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Share',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);

@@ -9,10 +9,28 @@ import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/design_system/design_system.dart';
+import '../../core/providers/theme_provider.dart';
+import '../../core/services/cache/hive_service.dart';
 import '../../providers/search_history_provider.dart';
 import '../../providers/providers.dart'
     hide searchHistoryProvider, recentlyPlayedProvider;
 import '../../models/models.dart';
+import '../services/audio_player_service.dart';
+import '../services/download_service.dart';
+import '../services/playback/playback_data.dart';
+import '../services/queue_persistence_service.dart';
+
+const Set<String> _backupSettingsKeys = <String>{
+  ThemeModeNotifier.themeModePrefKey,
+  kStreamingQualityKey,
+  kStreamCacheWifiOnlyKey,
+  kStreamCacheSizeLimitMbKey,
+  kStreamCacheMaxConcurrentKey,
+  kCrossfadeDurationMsKey,
+  kDownloadQualityKey,
+  kDownloadParallelPartCountKey,
+  kDownloadParallelMinSizeMbKey,
+};
 
 /// Backup and restore screen
 class BackupRestoreScreen extends ConsumerStatefulWidget {
@@ -31,11 +49,19 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
+    final albumColors = ref.watch(albumColorsProvider);
+    final hasAlbumColors = !albumColors.isDefault;
+
+    // Dynamic colors - plain white background in light mode
+    final backgroundColor = (hasAlbumColors && isDark)
+        ? albumColors.backgroundSecondary
+        : (isDark ? MineColors.darkBackground : MineColors.background);
+    final accentColor = hasAlbumColors
+        ? albumColors.accent
+        : colorScheme.primary;
 
     return Scaffold(
-      backgroundColor: isDark
-          ? MineColors.darkBackground
-          : MineColors.background,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text('Backup & Restore'),
         backgroundColor: Colors.transparent,
@@ -48,16 +74,16 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: colorScheme.primaryContainer.withValues(alpha: 0.2),
+              color: accentColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                Icon(Iconsax.info_circle, color: colorScheme.primary),
+                Icon(Iconsax.info_circle, color: accentColor),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Backup includes liked songs, playlists, search history, and settings.',
+                    'Backup includes liked songs, playlists, search history, recently played, and key app settings.',
                     style: TextStyle(
                       color: isDark ? Colors.white70 : MineColors.textSecondary,
                     ),
@@ -127,8 +153,9 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             context,
             isDark: isDark,
             icon: Iconsax.trash,
-            title: 'Clear All Data',
-            subtitle: 'Remove all local data and settings',
+            title: 'Clear App Data',
+            subtitle:
+                'Reset app data/settings while keeping downloaded audio files',
             color: Colors.red,
             onTap: _clearAllData,
           ),
@@ -289,7 +316,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Clear All Data?'),
         content: const Text(
-          'This will remove all liked songs, playlists, search history, and settings. This cannot be undone.',
+          'This resets local app data and settings, but keeps downloaded song files. This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -308,19 +335,47 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     if (confirmed != true) return;
 
     try {
+      final playerService = ref.read(audioPlayerServiceProvider);
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+      await QueuePersistenceService.clearQueue();
 
-      // Clear providers
-      ref.invalidate(likedSongsProvider);
-      ref.invalidate(localPlaylistsProvider);
-      ref.invalidate(searchHistoryProvider);
-      ref.invalidate(recentlyPlayedProvider);
+      // Clear non-download local cache/storage in Hive.
+      await HiveService.tracksBox.clear();
+      await HiveService.searchCacheBox.clear();
+      await HiveService.playbackBox.clear();
+      await HiveService.metadataBox.clear();
+      await HiveService.lyricsBox.clear();
+      await HiveService.homePageBox.clear();
+      await HiveService.albumsBox.clear();
+      await HiveService.artistsBox.clear();
+      await HiveService.playlistsBox.clear();
+      await HiveService.colorsBox.clear();
+      await HiveService.streamCacheBox.clear();
+      await HiveService.localMusicFoldersBox.clear();
+      await HiveService.localMusicTracksBox.clear();
+
+      // Keep downloaded files untouched, but clear stream byte-cache files.
+      await playerService.clearStreamAudioCache();
+
+      // Reset in-memory app state.
+      ref.read(likedSongsProvider.notifier).replaceAll(const []);
+      ref.read(localPlaylistsProvider.notifier).replaceAll(const []);
+      await ref.read(searchHistoryProvider.notifier).clearHistory();
+      await ref.read(recentlyPlayedProvider.notifier).clearHistory();
+      ref.invalidate(ytMusicLikedSongsProvider);
+      ref.invalidate(ytMusicSavedAlbumsProvider);
+      ref.invalidate(ytMusicSavedPlaylistsProvider);
+      ref.invalidate(ytMusicSubscribedArtistsProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('All data cleared')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'App data cleared (downloaded audio files were preserved)',
+            ),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -337,6 +392,13 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     final playlists = ref.read(localPlaylistsProvider);
     final searchHistory = ref.read(searchHistoryProvider);
     final recentlyPlayed = ref.read(recentlyPlayedProvider);
+    final prefs = await SharedPreferences.getInstance();
+
+    final settings = <String, dynamic>{};
+    for (final key in _backupSettingsKeys) {
+      if (!prefs.containsKey(key)) continue;
+      settings[key] = prefs.get(key);
+    }
 
     return {
       'version': 1,
@@ -345,9 +407,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       'playlists': playlists.map((p) => p.toJson()).toList(),
       'search_history': searchHistory,
       'recently_played': recentlyPlayed.map((t) => t.toJson()).toList(),
-      'settings': {
-        // Add any settings you want to backup
-      },
+      'settings': settings,
     };
   }
 
@@ -357,34 +417,107 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       final songs = (backup['liked_songs'] as List)
           .map((json) => Track.fromJson(json))
           .toList();
-      for (final song in songs) {
-        ref.read(likedSongsProvider.notifier).toggleLike(song);
-      }
+      ref.read(likedSongsProvider.notifier).replaceAll(songs);
     }
 
     // Restore playlists
     if (backup['playlists'] != null) {
-      // TODO: Add restore method to playlist provider
-      // final playlists = (backup['playlists'] as List)
-      //     .map((json) => Playlist.fromJson(json))
-      //     .toList();
+      final playlists = (backup['playlists'] as List)
+          .map((json) => Playlist.fromJson(json))
+          .toList();
+      ref.read(localPlaylistsProvider.notifier).replaceAll(playlists);
     }
 
     // Restore search history
     if (backup['search_history'] != null) {
+      await ref.read(searchHistoryProvider.notifier).clearHistory();
       for (final query in (backup['search_history'] as List).reversed) {
-        ref.read(searchHistoryProvider.notifier).addSearch(query);
+        await ref.read(searchHistoryProvider.notifier).addSearch(query);
       }
     }
 
     // Restore recently played
     if (backup['recently_played'] != null) {
+      await ref.read(recentlyPlayedProvider.notifier).clearHistory();
       final tracks = (backup['recently_played'] as List)
           .map((json) => Track.fromJson(json))
           .toList();
       for (final track in tracks.reversed) {
-        ref.read(recentlyPlayedProvider.notifier).addTrack(track);
+        await ref.read(recentlyPlayedProvider.notifier).addTrack(track);
       }
+    }
+
+    final settingsRaw = backup['settings'];
+    if (settingsRaw is Map) {
+      await _restoreSettings(Map<String, dynamic>.from(settingsRaw));
+    }
+  }
+
+  Future<void> _restoreSettings(Map<String, dynamic> settings) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    for (final entry in settings.entries) {
+      if (!_backupSettingsKeys.contains(entry.key)) continue;
+      final value = entry.value;
+      if (value is bool) {
+        await prefs.setBool(entry.key, value);
+      } else if (value is int) {
+        await prefs.setInt(entry.key, value);
+      } else if (value is double) {
+        await prefs.setDouble(entry.key, value);
+      } else if (value is String) {
+        await prefs.setString(entry.key, value);
+      } else if (value is List && value.every((v) => v is String)) {
+        await prefs.setStringList(entry.key, value.cast<String>());
+      }
+    }
+
+    if (settings.containsKey(ThemeModeNotifier.themeModePrefKey)) {
+      final themeIndex = settings[ThemeModeNotifier.themeModePrefKey];
+      if (themeIndex is int &&
+          themeIndex >= 0 &&
+          themeIndex < MineThemeMode.values.length) {
+        ref
+            .read(themeModeProvider.notifier)
+            .setThemeMode(MineThemeMode.values[themeIndex]);
+      }
+    }
+
+    final playerService = ref.read(audioPlayerServiceProvider);
+    final streamingQuality = settings[kStreamingQualityKey];
+    if (streamingQuality is int &&
+        streamingQuality >= 0 &&
+        streamingQuality < AudioQuality.values.length) {
+      playerService.setAudioQuality(AudioQuality.values[streamingQuality]);
+    }
+
+    final cacheWifiOnly = settings[kStreamCacheWifiOnlyKey];
+    if (cacheWifiOnly is bool) {
+      await playerService.setStreamCacheWifiOnly(cacheWifiOnly);
+    }
+
+    final cacheLimit = settings[kStreamCacheSizeLimitMbKey];
+    if (cacheLimit is int) {
+      await playerService.setStreamCacheSizeLimitMb(cacheLimit);
+    }
+
+    final cacheConcurrent = settings[kStreamCacheMaxConcurrentKey];
+    if (cacheConcurrent is int) {
+      await playerService.setStreamCacheMaxConcurrent(cacheConcurrent);
+    }
+
+    final crossfadeMs = settings[kCrossfadeDurationMsKey];
+    if (crossfadeMs is int) {
+      await playerService.setCrossfadeDurationMs(crossfadeMs);
+    }
+
+    final downloadQualityIndex = settings[kDownloadQualityKey];
+    if (downloadQualityIndex is int &&
+        downloadQualityIndex >= 0 &&
+        downloadQualityIndex < AudioQuality.values.length) {
+      final quality = AudioQuality.values[downloadQualityIndex];
+      await ref.read(downloadQualityProvider.notifier).setQuality(quality);
+      ref.read(downloadManagerProvider.notifier).setDownloadQuality(quality);
     }
   }
 }

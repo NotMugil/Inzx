@@ -12,7 +12,7 @@ import '../ytmusic_login_screen.dart';
 import '../ytmusic_settings_screen.dart';
 import '../widgets/home_shelves.dart';
 import '../widgets/playlist_screen.dart';
-import '../widgets/album_screen.dart';
+import '../widgets/album_screen.dart' hide albumColorsProvider;
 import '../widgets/artist_screen.dart';
 import '../widgets/now_playing_screen.dart';
 import '../search_screen.dart';
@@ -28,6 +28,22 @@ class MusicHomeTab extends ConsumerStatefulWidget {
 class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
   bool _hasPrefetched =
       false; // Track if we've already prefetched for current home data
+
+  // Computed adaptive text colors based on background luminance
+  bool get _isDark => Theme.of(context).brightness == Brightness.dark;
+
+  Color get _backgroundColor {
+    final albumColors = ref.watch(albumColorsProvider);
+    final hasAlbumColors = !albumColors.isDefault;
+    // Only use album colors for background in dark mode
+    if (hasAlbumColors && _isDark) {
+      return albumColors.backgroundSecondary;
+    }
+    return _isDark ? MineColors.darkBackground : MineColors.background;
+  }
+
+  ({Color primary, Color secondary, Color tertiary}) get _textColors =>
+      MineColors.adaptiveTextColors(_backgroundColor);
 
   /// OuterTune-style prefetching: resolve stream URLs when tracks become visible
   /// This makes play taps instant (pure cache lookup, no network call)
@@ -241,16 +257,14 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
                     Icon(
                       Icons.search_rounded,
                       size: 22,
-                      color: isDark ? Colors.white60 : MineColors.textSecondary,
+                      color: _textColors.secondary,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Search songs, albums, artists',
                         style: TextStyle(
-                          color: isDark
-                              ? Colors.white54
-                              : MineColors.textSecondary,
+                          color: _textColors.tertiary,
                           fontSize: 15,
                         ),
                       ),
@@ -700,7 +714,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: _textColors.primary,
             ),
           ),
         ),
@@ -761,7 +775,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: _textColors.primary,
               ),
             ),
           ],
@@ -793,7 +807,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: _textColors.primary,
             ),
           ),
         ),
@@ -883,10 +897,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
               subtitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
-              ),
+              style: TextStyle(fontSize: 12, color: _textColors.secondary),
             ),
           ],
         ),
@@ -907,7 +918,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white38 : MineColors.textSecondary,
+                  color: _textColors.tertiary,
                   letterSpacing: 1,
                 ),
               ),
@@ -1003,9 +1014,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? Colors.white54
-                            : MineColors.textSecondary,
+                        color: _textColors.tertiary,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -1015,7 +1024,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: _textColors.primary,
                       ),
                     ),
                   ],
@@ -1033,7 +1042,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
                   ),
                   child: Icon(
                     Iconsax.profile_2user,
-                    color: isDark ? Colors.white70 : MineColors.textSecondary,
+                    color: _textColors.secondary,
                     size: 20,
                   ),
                 ),
@@ -1135,7 +1144,7 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: _textColors.primary,
             ),
           ),
         ],

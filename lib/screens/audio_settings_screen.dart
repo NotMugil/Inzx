@@ -5,6 +5,7 @@ import '../../core/design_system/design_system.dart';
 import '../providers/providers.dart';
 import '../services/playback/playback_data.dart';
 import '../services/download_service.dart';
+import '../services/album_color_extractor.dart';
 
 /// Audio settings screen with quality selection
 class AudioSettingsScreen extends ConsumerWidget {
@@ -14,6 +15,17 @@ class AudioSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
+    final albumColors = ref.watch(albumColorsProvider);
+    final hasAlbumColors = !albumColors.isDefault;
+
+    // Dynamic colors - plain white background in light mode
+    final backgroundColor = (hasAlbumColors && isDark)
+        ? albumColors.backgroundSecondary
+        : (isDark ? MineColors.darkBackground : MineColors.background);
+    final accentColor = hasAlbumColors
+        ? albumColors.accent
+        : colorScheme.primary;
+
     final currentQuality = ref.watch(audioQualityProvider);
     final streamInfo = ref.watch(streamQualityInfoProvider);
     final streamCacheWifiOnly = ref.watch(streamCacheWifiOnlyProvider);
@@ -26,9 +38,7 @@ class AudioSettingsScreen extends ConsumerWidget {
     final playerService = ref.watch(audioPlayerServiceProvider);
 
     return Scaffold(
-      backgroundColor: isDark
-          ? MineColors.darkBackground
-          : MineColors.background,
+      backgroundColor: backgroundColor,
       appBar: AppBar(
         title: const Text('Audio Settings'),
         backgroundColor: Colors.transparent,
@@ -42,7 +52,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             _buildInfoCard(
               context,
               isDark: isDark,
-              colorScheme: colorScheme,
+              accentColor: accentColor,
               title: 'Now Playing',
               subtitle: streamInfo,
               icon: Iconsax.music_circle,
@@ -75,7 +85,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             context,
             ref: ref,
             isDark: isDark,
-            colorScheme: colorScheme,
+            accentColor: accentColor,
             quality: AudioQuality.auto,
             currentQuality: currentQuality,
             title: 'Auto',
@@ -88,7 +98,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             context,
             ref: ref,
             isDark: isDark,
-            colorScheme: colorScheme,
+            accentColor: accentColor,
             quality: AudioQuality.low,
             currentQuality: currentQuality,
             title: 'Low',
@@ -101,7 +111,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             context,
             ref: ref,
             isDark: isDark,
-            colorScheme: colorScheme,
+            accentColor: accentColor,
             quality: AudioQuality.medium,
             currentQuality: currentQuality,
             title: 'Medium',
@@ -114,7 +124,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             context,
             ref: ref,
             isDark: isDark,
-            colorScheme: colorScheme,
+            accentColor: accentColor,
             quality: AudioQuality.high,
             currentQuality: currentQuality,
             title: 'High',
@@ -128,7 +138,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             context,
             ref: ref,
             isDark: isDark,
-            colorScheme: colorScheme,
+            accentColor: accentColor,
             quality: AudioQuality.max,
             currentQuality: currentQuality,
             title: 'Maximum',
@@ -140,7 +150,7 @@ class AudioSettingsScreen extends ConsumerWidget {
           const SizedBox(height: 32),
 
           Text(
-            'Playback Transition',
+            'Crossfade Transition',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -158,7 +168,7 @@ class AudioSettingsScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           _buildCrossfadeSection(
             isDark: isDark,
-            colorScheme: colorScheme,
+            accentColor: accentColor,
             currentDurationMs: crossfadeDurationMs,
             onChanged: (value) async {
               await playerService.setCrossfadeDurationMs(value);
@@ -189,7 +199,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             context,
             ref: ref,
             isDark: isDark,
-            colorScheme: colorScheme,
+            accentColor: accentColor,
             wifiOnly: streamCacheWifiOnly,
             cacheLimitMb: streamCacheLimitMb,
             maxConcurrent: streamCacheMaxConcurrent,
@@ -206,58 +216,6 @@ class AudioSettingsScreen extends ConsumerWidget {
               await playerService.setStreamCacheMaxConcurrent(value);
             },
           ),
-
-          const SizedBox(height: 32),
-
-          // Download quality section
-          Text(
-            'Download Quality',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Quality for offline downloads',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Download quality selector
-          _DownloadQualitySetting(isDark: isDark, colorScheme: colorScheme),
-
-          const SizedBox(height: 32),
-          // Download Location section
-          Text(
-            'Download Location',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Where downloaded music files are stored',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          _DownloadPathSetting(isDark: isDark, colorScheme: colorScheme),
-
-          const SizedBox(height: 32),
-          // Data usage info
-          _buildDataUsageInfo(isDark, colorScheme),
         ],
       ),
     );
@@ -266,7 +224,7 @@ class AudioSettingsScreen extends ConsumerWidget {
   Widget _buildInfoCard(
     BuildContext context, {
     required bool isDark,
-    required ColorScheme colorScheme,
+    required Color accentColor,
     required String title,
     required String subtitle,
     required IconData icon,
@@ -276,17 +234,15 @@ class AudioSettingsScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: isDark
             ? Colors.white.withValues(alpha: 0.05)
-            : colorScheme.primaryContainer.withValues(alpha: 0.2),
+            : accentColor.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isDark
-              ? Colors.white12
-              : colorScheme.primary.withValues(alpha: 0.2),
+          color: isDark ? Colors.white12 : accentColor.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
         children: [
-          Icon(icon, color: colorScheme.primary, size: 24),
+          Icon(icon, color: accentColor, size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -319,7 +275,7 @@ class AudioSettingsScreen extends ConsumerWidget {
     BuildContext context, {
     required WidgetRef ref,
     required bool isDark,
-    required ColorScheme colorScheme,
+    required Color accentColor,
     required AudioQuality quality,
     required AudioQuality currentQuality,
     required String title,
@@ -338,14 +294,14 @@ class AudioSettingsScreen extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? colorScheme.primary.withValues(alpha: 0.15)
+              ? accentColor.withValues(alpha: 0.15)
               : isDark
               ? Colors.white.withValues(alpha: 0.05)
               : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? colorScheme.primary
+                ? accentColor
                 : isDark
                 ? Colors.white12
                 : Colors.grey.shade300,
@@ -359,7 +315,7 @@ class AudioSettingsScreen extends ConsumerWidget {
               height: 40,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? colorScheme.primary.withValues(alpha: 0.2)
+                    ? accentColor.withValues(alpha: 0.2)
                     : isDark
                     ? Colors.white.withValues(alpha: 0.1)
                     : Colors.grey.shade200,
@@ -368,7 +324,7 @@ class AudioSettingsScreen extends ConsumerWidget {
               child: Icon(
                 icon,
                 color: isSelected
-                    ? colorScheme.primary
+                    ? accentColor
                     : (isDark ? Colors.white54 : Colors.grey.shade600),
               ),
             ),
@@ -394,7 +350,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: colorScheme.primary.withValues(alpha: 0.2),
+                            color: accentColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -402,7 +358,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: colorScheme.primary,
+                              color: accentColor,
                             ),
                           ),
                         ),
@@ -420,7 +376,7 @@ class AudioSettingsScreen extends ConsumerWidget {
               ),
             ),
             if (isSelected)
-              Icon(Icons.check_circle, color: colorScheme.primary)
+              Icon(Icons.check_circle, color: accentColor)
             else
               Icon(
                 Icons.circle_outlined,
@@ -436,7 +392,7 @@ class AudioSettingsScreen extends ConsumerWidget {
     BuildContext context, {
     required WidgetRef ref,
     required bool isDark,
-    required ColorScheme colorScheme,
+    required Color accentColor,
     required bool wifiOnly,
     required int cacheLimitMb,
     required int maxConcurrent,
@@ -464,7 +420,7 @@ class AudioSettingsScreen extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(Iconsax.archive, color: colorScheme.primary, size: 24),
+              Icon(Iconsax.archive, color: accentColor, size: 24),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -527,10 +483,10 @@ class AudioSettingsScreen extends ConsumerWidget {
               ChoiceChip(
                 selected: wifiOnly,
                 label: const Text('Wi-Fi only'),
-                selectedColor: colorScheme.primary,
+                selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: wifiOnly
-                      ? colorScheme.onPrimary
+                      ? MineColors.contrastTextOn(accentColor)
                       : (isDark ? Colors.white : MineColors.textPrimary),
                 ),
                 onSelected: (picked) {
@@ -542,10 +498,10 @@ class AudioSettingsScreen extends ConsumerWidget {
               ChoiceChip(
                 selected: !wifiOnly,
                 label: const Text('Wi-Fi + mobile data'),
-                selectedColor: colorScheme.primary,
+                selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: !wifiOnly
-                      ? colorScheme.onPrimary
+                      ? MineColors.contrastTextOn(accentColor)
                       : (isDark ? Colors.white : MineColors.textPrimary),
                 ),
                 onSelected: (picked) {
@@ -584,10 +540,10 @@ class AudioSettingsScreen extends ConsumerWidget {
               return ChoiceChip(
                 selected: selected,
                 label: Text('$option'),
-                selectedColor: colorScheme.primary,
+                selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: selected
-                      ? colorScheme.onPrimary
+                      ? MineColors.contrastTextOn(accentColor)
                       : (isDark ? Colors.white : MineColors.textPrimary),
                 ),
                 onSelected: (picked) {
@@ -624,10 +580,10 @@ class AudioSettingsScreen extends ConsumerWidget {
               return ChoiceChip(
                 selected: selected,
                 label: Text('$optionMb MB'),
-                selectedColor: colorScheme.primary,
+                selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: selected
-                      ? colorScheme.onPrimary
+                      ? MineColors.contrastTextOn(accentColor)
                       : (isDark ? Colors.white : MineColors.textPrimary),
                 ),
                 onSelected: (picked) {
@@ -645,7 +601,7 @@ class AudioSettingsScreen extends ConsumerWidget {
 
   Widget _buildCrossfadeSection({
     required bool isDark,
-    required ColorScheme colorScheme,
+    required Color accentColor,
     required int currentDurationMs,
     required Future<void> Function(int value) onChanged,
   }) {
@@ -678,10 +634,10 @@ class AudioSettingsScreen extends ConsumerWidget {
               return ChoiceChip(
                 selected: selected,
                 label: Text(labelFor(optionMs)),
-                selectedColor: colorScheme.primary,
+                selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: selected
-                      ? colorScheme.onPrimary
+                      ? MineColors.contrastTextOn(accentColor)
                       : (isDark ? Colors.white : MineColors.textPrimary),
                 ),
                 onSelected: (picked) {
@@ -712,68 +668,6 @@ class AudioSettingsScreen extends ConsumerWidget {
     if (bytes <= 0) return '0 MB';
     return '${(bytes / mb).toStringAsFixed(1)} MB';
   }
-
-  Widget _buildDataUsageInfo(bool isDark, ColorScheme colorScheme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.03)
-            : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Iconsax.info_circle,
-                size: 18,
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Estimated Data Usage',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : MineColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildDataRow('Low', '~3 MB per song', isDark),
-          _buildDataRow('Medium', '~6 MB per song', isDark),
-          _buildDataRow('High', '~12 MB per song', isDark),
-          _buildDataRow('Lossless', '~25+ MB per song', isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDataRow(String label, String value, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: isDark ? Colors.white70 : MineColors.textSecondary,
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 /// Quick quality picker for Now Playing screen
@@ -792,6 +686,12 @@ class AudioQualityPicker extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
+    final albumColors = ref.watch(albumColorsProvider);
+    final hasAlbumColors = !albumColors.isDefault;
+    final accentColor = hasAlbumColors
+        ? albumColors.accent
+        : colorScheme.primary;
+
     final currentQuality = ref.watch(audioQualityProvider);
     final playerService = ref.watch(audioPlayerServiceProvider);
 
@@ -834,7 +734,7 @@ class AudioQualityPicker extends ConsumerWidget {
             AudioQuality.auto,
             currentQuality,
             isDark,
-            colorScheme,
+            accentColor,
             () {
               playerService.setAudioQuality(AudioQuality.auto);
               Navigator.pop(context);
@@ -846,7 +746,7 @@ class AudioQualityPicker extends ConsumerWidget {
             AudioQuality.low,
             currentQuality,
             isDark,
-            colorScheme,
+            accentColor,
             () {
               playerService.setAudioQuality(AudioQuality.low);
               Navigator.pop(context);
@@ -858,7 +758,7 @@ class AudioQualityPicker extends ConsumerWidget {
             AudioQuality.medium,
             currentQuality,
             isDark,
-            colorScheme,
+            accentColor,
             () {
               playerService.setAudioQuality(AudioQuality.medium);
               Navigator.pop(context);
@@ -870,7 +770,7 @@ class AudioQualityPicker extends ConsumerWidget {
             AudioQuality.high,
             currentQuality,
             isDark,
-            colorScheme,
+            accentColor,
             () {
               playerService.setAudioQuality(AudioQuality.high);
               Navigator.pop(context);
@@ -882,7 +782,7 @@ class AudioQualityPicker extends ConsumerWidget {
             AudioQuality.max,
             currentQuality,
             isDark,
-            colorScheme,
+            accentColor,
             () {
               playerService.setAudioQuality(AudioQuality.max);
               Navigator.pop(context);
@@ -901,7 +801,7 @@ class AudioQualityPicker extends ConsumerWidget {
     AudioQuality quality,
     AudioQuality current,
     bool isDark,
-    ColorScheme colorScheme,
+    Color accentColor,
     VoidCallback onTap,
   ) {
     final isSelected = quality == current;
@@ -910,7 +810,7 @@ class AudioQualityPicker extends ConsumerWidget {
       leading: Icon(
         isSelected ? Icons.check_circle : Icons.circle_outlined,
         color: isSelected
-            ? colorScheme.primary
+            ? accentColor
             : (isDark ? Colors.white38 : Colors.grey),
       ),
       title: Text(
@@ -921,268 +821,6 @@ class AudioQualityPicker extends ConsumerWidget {
         ),
       ),
       onTap: onTap,
-    );
-  }
-}
-
-/// Download quality setting widget
-class _DownloadQualitySetting extends ConsumerWidget {
-  final bool isDark;
-  final ColorScheme colorScheme;
-
-  const _DownloadQualitySetting({
-    required this.isDark,
-    required this.colorScheme,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final downloadQuality = ref.watch(downloadQualityProvider);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? Colors.white12 : Colors.grey.shade300,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Iconsax.document_download,
-                color: colorScheme.primary,
-                size: 24,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Download Quality',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _getQualityDescription(downloadQuality),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isDark
-                            ? Colors.white54
-                            : MineColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Quality options as chips
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildQualityChip(
-                context,
-                ref,
-                AudioQuality.low,
-                'Low',
-                '~64 kbps',
-                downloadQuality,
-              ),
-              _buildQualityChip(
-                context,
-                ref,
-                AudioQuality.medium,
-                'Medium',
-                '~128 kbps',
-                downloadQuality,
-              ),
-              _buildQualityChip(
-                context,
-                ref,
-                AudioQuality.high,
-                'High',
-                '~256 kbps',
-                downloadQuality,
-              ),
-              _buildQualityChip(
-                context,
-                ref,
-                AudioQuality.max,
-                'Max',
-                'Highest',
-                downloadQuality,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getQualityDescription(AudioQuality quality) {
-    switch (quality) {
-      case AudioQuality.auto:
-        return 'Auto - Adapts to network';
-      case AudioQuality.low:
-        return 'Low - ~64 kbps (saves storage)';
-      case AudioQuality.medium:
-        return 'Medium - ~128 kbps (balanced)';
-      case AudioQuality.high:
-        return 'High - ~256 kbps (recommended)';
-      case AudioQuality.max:
-        return 'Maximum - Highest available (~256 kbps)';
-    }
-  }
-
-  Widget _buildQualityChip(
-    BuildContext context,
-    WidgetRef ref,
-    AudioQuality quality,
-    String label,
-    String subtitle,
-    AudioQuality currentQuality,
-  ) {
-    final isSelected = quality == currentQuality;
-
-    return FilterChip(
-      selected: isSelected,
-      label: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 10,
-              color: isSelected
-                  ? colorScheme.onPrimary.withValues(alpha: 0.8)
-                  : (isDark ? Colors.white54 : Colors.grey),
-            ),
-          ),
-        ],
-      ),
-      selectedColor: colorScheme.primary,
-      checkmarkColor: colorScheme.onPrimary,
-      backgroundColor: isDark
-          ? Colors.white.withValues(alpha: 0.1)
-          : Colors.grey.shade200,
-      labelStyle: TextStyle(
-        color: isSelected
-            ? colorScheme.onPrimary
-            : (isDark ? Colors.white : Colors.black87),
-      ),
-      onSelected: (selected) {
-        if (selected) {
-          ref.read(downloadQualityProvider.notifier).setQuality(quality);
-          // Also update the download manager
-          ref
-              .read(downloadManagerProvider.notifier)
-              .setDownloadQuality(quality);
-        }
-      },
-    );
-  }
-}
-
-/// Download path setting widget
-class _DownloadPathSetting extends ConsumerWidget {
-  final bool isDark;
-  final ColorScheme colorScheme;
-
-  const _DownloadPathSetting({required this.isDark, required this.colorScheme});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final downloadPathAsync = ref.watch(downloadPathProvider);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? Colors.white12 : Colors.grey.shade300,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Iconsax.folder_2, color: colorScheme.primary, size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Storage Location',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    downloadPathAsync.when(
-                      data: (path) => Text(
-                        path,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? Colors.white54
-                              : MineColors.textSecondary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      loading: () => Text(
-                        'Loading...',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark
-                              ? Colors.white54
-                              : MineColors.textSecondary,
-                        ),
-                      ),
-                      error: (error, stackTrace) => Text(
-                        'Error loading path',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.red.shade300,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Downloads are stored in app-private storage for better reliability and no permission requirements.',
-            style: TextStyle(
-              fontSize: 11,
-              color: isDark ? Colors.white38 : MineColors.textSecondary,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

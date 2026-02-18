@@ -589,7 +589,11 @@ class AudioPlayerService {
       if (!incoming.playing) {
         unawaited(incoming.play());
       }
-      await _setVolumeSafely(incoming, 1.0, context: 'post-crossfade-stabilize');
+      await _setVolumeSafely(
+        incoming,
+        1.0,
+        context: 'post-crossfade-stabilize',
+      );
       if (incoming.volume >= 0.98) {
         break;
       }
@@ -688,7 +692,11 @@ class AudioPlayerService {
       await incomingPlayer.setLoopMode(outgoingPlayer.loopMode);
       await incomingPlayer.setSpeed(outgoingPlayer.speed);
       await incomingPlayer.setAudioSource(built.source, preload: true);
-      await _setVolumeSafely(incomingPlayer, 0.12, context: 'crossfade-bootstrap');
+      await _setVolumeSafely(
+        incomingPlayer,
+        0.12,
+        context: 'crossfade-bootstrap',
+      );
 
       _player = incomingPlayer;
       _currentIndex = targetIndex;
@@ -724,8 +732,16 @@ class AudioPlayerService {
       );
 
       await outgoingPlayer.stop();
-      await _setVolumeSafely(outgoingPlayer, 1.0, context: 'crossfade-reset-outgoing');
-      await _setVolumeSafely(incomingPlayer, 1.0, context: 'crossfade-settle-incoming');
+      await _setVolumeSafely(
+        outgoingPlayer,
+        1.0,
+        context: 'crossfade-reset-outgoing',
+      );
+      await _setVolumeSafely(
+        incomingPlayer,
+        1.0,
+        context: 'crossfade-settle-incoming',
+      );
       if (!incomingPlayer.playing) {
         unawaited(incomingPlayer.play());
       }
@@ -1198,6 +1214,11 @@ class AudioPlayerService {
     } catch (_) {
       return 0;
     }
+  }
+
+  /// Clear all on-disk streaming audio cache files.
+  Future<void> clearStreamAudioCache() async {
+    await _clearAllAudioCache();
   }
 
   Future<void> _enforceAudioCacheLimit() async {

@@ -96,19 +96,52 @@ class MusicMiniPlayer extends ConsumerWidget {
 
         final track = state.currentTrack!;
 
-        // Use album colors if not default, otherwise fall back to dark theme
+        // Use album colors if not default, otherwise fall back to theme
         final hasAlbumColors = !albumColors.isDefault;
-
-        // Text/icon colors - always white on album colored backgrounds
-        final foregroundColor = hasAlbumColors
-            ? albumColors.onBackground
-            : (isDark ? Colors.white : MineColors.textPrimary);
-        final secondaryColor = foregroundColor.withValues(alpha: 0.7);
 
         // Accent for progress bar
         final accentColor = hasAlbumColors
             ? albumColors.accent
             : colorScheme.primary;
+
+        // Background gradient - use album tint in light mode when dynamic colors are active
+        final List<Color> gradientColors;
+        final Color borderColor;
+        Color backgroundForText; // Used to compute adaptive text colors
+
+        if (isDark) {
+          if (hasAlbumColors) {
+            // Dark mode with album colors - subtle album tint
+            gradientColors = [
+              albumColors.backgroundPrimary.withValues(alpha: 0.9),
+              albumColors.backgroundSecondary.withValues(alpha: 0.85),
+            ];
+            borderColor = albumColors.accent.withValues(alpha: 0.2);
+            backgroundForText = albumColors.backgroundPrimary;
+          } else {
+            gradientColors = [
+              Colors.white.withValues(alpha: 0.12),
+              Colors.white.withValues(alpha: 0.05),
+            ];
+            backgroundForText = MineColors.darkBackground;
+            borderColor = Colors.white.withValues(alpha: 0.15);
+          }
+        } else {
+          // Light mode - always use white/glass, no album tint
+          gradientColors = [
+            Colors.white.withValues(alpha: 0.85),
+            Colors.white.withValues(alpha: 0.65),
+          ];
+          borderColor = hasAlbumColors
+              ? accentColor.withValues(alpha: 0.15)
+              : Colors.white.withValues(alpha: 0.8);
+          backgroundForText = MineColors.background;
+        }
+
+        // Adaptive text colors based on background luminance
+        final textColors = MineColors.adaptiveTextColors(backgroundForText);
+        final foregroundColor = textColors.primary;
+        final secondaryColor = textColors.secondary;
 
         return GestureDetector(
           onTap: onTap,
@@ -121,23 +154,10 @@ class MusicMiniPlayer extends ConsumerWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: isDark
-                        ? [
-                            Colors.white.withValues(alpha: 0.12),
-                            Colors.white.withValues(alpha: 0.05),
-                          ]
-                        : [
-                            Colors.white.withValues(alpha: 0.85),
-                            Colors.white.withValues(alpha: 0.65),
-                          ],
+                    colors: gradientColors,
                   ),
                   border: Border(
-                    top: BorderSide(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.15)
-                          : Colors.white.withValues(alpha: 0.8),
-                      width: 0.5,
-                    ),
+                    top: BorderSide(color: borderColor, width: 0.5),
                   ),
                 ),
                 child: Column(

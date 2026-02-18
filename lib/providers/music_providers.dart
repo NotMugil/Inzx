@@ -352,6 +352,17 @@ final likedSongsProvider =
 class LikedSongsNotifier extends StateNotifier<List<Track>> {
   LikedSongsNotifier() : super([]);
 
+  void replaceAll(List<Track> tracks) {
+    final seen = <String>{};
+    final normalized = <Track>[];
+    for (final track in tracks) {
+      if (seen.add(track.id)) {
+        normalized.add(track);
+      }
+    }
+    state = normalized;
+  }
+
   void toggleLike(Track track) {
     final isLiked = state.any((t) => t.id == track.id);
     if (isLiked) {
@@ -442,6 +453,18 @@ class RecentlyPlayedNotifier extends StateNotifier<List<Track>> {
 
   RecentlyPlayedNotifier() : super([]);
 
+  void replaceAll(List<Track> tracks) {
+    final seen = <String>{};
+    final normalized = <Track>[];
+    for (final track in tracks) {
+      if (seen.add(track.id)) {
+        normalized.add(track);
+      }
+      if (normalized.length >= _maxRecent) break;
+    }
+    state = normalized;
+  }
+
   void addTrack(Track track) {
     // Remove if already exists
     final newList = state.where((t) => t.id != track.id).toList();
@@ -471,6 +494,17 @@ final localPlaylistsProvider =
 /// Notifier for local playlists
 class LocalPlaylistsNotifier extends StateNotifier<List<Playlist>> {
   LocalPlaylistsNotifier() : super([]);
+
+  void replaceAll(List<Playlist> playlists) {
+    final seen = <String>{};
+    final normalized = <Playlist>[];
+    for (final playlist in playlists) {
+      if (seen.add(playlist.id)) {
+        normalized.add(playlist);
+      }
+    }
+    state = normalized;
+  }
 
   void createPlaylist(String name, {String? description}) {
     final playlist = Playlist(

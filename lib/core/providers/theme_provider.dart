@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../design_system/colors.dart';
 
 /// Theme mode options for the app
@@ -89,10 +90,45 @@ final themeModeProvider =
 
 /// Notifier to manage theme mode state
 class ThemeModeNotifier extends StateNotifier<MineThemeMode> {
-  ThemeModeNotifier() : super(MineThemeMode.dark); // Default to dark mode
+  static const String themeModePrefKey = 'inzx_theme_mode';
+  static const String _legacyThemeModePrefKey = 'mine_theme_mode';
+
+  ThemeModeNotifier() : super(MineThemeMode.dark) {
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      int? index = prefs.getInt(themeModePrefKey);
+      if (index == null) {
+        index = prefs.getInt(_legacyThemeModePrefKey);
+        if (index != null) {
+          await prefs.setInt(themeModePrefKey, index);
+          await prefs.remove(_legacyThemeModePrefKey);
+        }
+      }
+      if (index == null || index < 0 || index >= MineThemeMode.values.length) {
+        return;
+      }
+      state = MineThemeMode.values[index];
+    } catch (_) {
+      // Keep default theme if preference loading fails.
+    }
+  }
+
+  Future<void> _saveThemeMode(MineThemeMode mode) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(themeModePrefKey, mode.index);
+    } catch (_) {
+      // Non-fatal: theme still updates in memory.
+    }
+  }
 
   void setThemeMode(MineThemeMode mode) {
     state = mode;
+    _saveThemeMode(mode);
   }
 
   void toggleTheme() {

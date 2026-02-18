@@ -16,6 +16,7 @@ import '../../services/audio_player_service.dart' as player;
 import '../../services/album_color_extractor.dart';
 import '../../services/lyrics/lyrics_service.dart';
 import '../../services/lyrics/lyrics_models.dart';
+import '../../core/design_system/colors.dart';
 import 'track_options_sheet.dart';
 import 'lyrics_view.dart';
 import 'ytm_drawer.dart';
@@ -212,7 +213,8 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     final currentTrack = ref.watch(currentTrackProvider);
     final currentQueueIndex = playerService.currentIndex;
 
-    if (currentQueueIndex >= 0 && currentQueueIndex != _lastAlbumArtSyncedIndex) {
+    if (currentQueueIndex >= 0 &&
+        currentQueueIndex != _lastAlbumArtSyncedIndex) {
       _lastAlbumArtSyncedIndex = currentQueueIndex;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || !_albumArtPageController.hasClients) return;
@@ -285,11 +287,15 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
     }
 
     // Calculate animated colors - smooth lerp from current to target
-    final colors = AlbumColors.lerp(
+    final animatedColors = AlbumColors.lerp(
       _currentColors,
       _targetColors,
       _colorAnimController.value,
     );
+
+    // Use lighter pastel version in light mode
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = isDark ? animatedColors : animatedColors.toLightMode();
 
     return playbackState.when(
       data: (state) {
@@ -404,7 +410,12 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
               _buildSyncedLyricPreview(textColor),
 
               // Track info
-              _buildTrackInfo(track, textColor, secondaryTextColor, accentColor),
+              _buildTrackInfo(
+                track,
+                textColor,
+                secondaryTextColor,
+                accentColor,
+              ),
 
               // Progress bar
               _NowPlayingProgressBar(
@@ -1726,10 +1737,18 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
         IconButton(
           onPressed: () {
             final albumColors = ref.read(albumColorsProvider);
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            // Use album colors in dark mode, plain white in light mode
+            final bgColor = isDark
+                ? albumColors.backgroundPrimary
+                : MineColors.background;
+            final txtColor = isDark
+                ? albumColors.onBackground
+                : MineColors.textPrimary;
             JamsPanel.show(
               context,
-              backgroundColor: albumColors.backgroundPrimary,
-              textColor: albumColors.onBackground,
+              backgroundColor: bgColor,
+              textColor: txtColor,
               accentColor: albumColors.accent,
             );
           },

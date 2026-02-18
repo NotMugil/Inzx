@@ -295,17 +295,25 @@ class _YTMusicLoginScreenState extends ConsumerState<YTMusicLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: isDark ? Colors.black : colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: isDark ? Colors.black : colorScheme.surface,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: Icon(
+            Icons.close,
+            color: isDark ? Colors.white : colorScheme.onSurface,
+          ),
           onPressed: () => Navigator.of(context).pop(false),
         ),
-        title: const Text(
+        title: Text(
           'Sign in to YouTube Music',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(
+            color: isDark ? Colors.white : colorScheme.onSurface,
+          ),
         ),
         actions: [
           if (_isLoading || _isLoggingIn)
@@ -327,16 +335,19 @@ class _YTMusicLoginScreenState extends ConsumerState<YTMusicLoginScreen> {
           WebViewWidget(controller: _controller),
           if (_isLoggingIn)
             Container(
-              color: Colors.black87,
-              child: const Center(
+              color: isDark ? Colors.black87 : Colors.black54,
+              child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(color: Colors.red),
-                    SizedBox(height: 16),
+                    const CircularProgressIndicator(color: Colors.red),
+                    const SizedBox(height: 16),
                     Text(
                       'Logging you in...',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      style: TextStyle(
+                        color: isDark ? Colors.white : colorScheme.onSurface,
+                        fontSize: 16,
+                      ),
                     ),
                   ],
                 ),
@@ -346,10 +357,15 @@ class _YTMusicLoginScreenState extends ConsumerState<YTMusicLoginScreen> {
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
-        color: Colors.grey[900],
-        child: const Text(
+        color: isDark ? Colors.grey[900] : Colors.grey[200],
+        child: Text(
           'Sign in with your Google account to sync your YouTube Music library, including liked songs, playlists, and albums.',
-          style: TextStyle(color: Colors.grey, fontSize: 12),
+          style: TextStyle(
+            color: isDark
+                ? Colors.grey
+                : colorScheme.onSurface.withValues(alpha: 0.6),
+            fontSize: 12,
+          ),
           textAlign: TextAlign.center,
         ),
       ),

@@ -129,19 +129,38 @@ class DynamicColorService {
     final primary = isDark ? albumColors.accentLight : albumColors.accent;
     final onPrimary = _getContrastColor(primary);
 
+    // In light mode, create light backgrounds with subtle album accent tint
+    final Color background;
+    final Color surface;
+    final Color dominant;
+    final Color darkMuted;
+
+    if (isDark) {
+      background = albumColors.backgroundPrimary;
+      surface = albumColors.surface;
+      dominant = albumColors.backgroundPrimary;
+      darkMuted = albumColors.backgroundSecondary;
+    } else {
+      // Light mode: use plain white backgrounds, dynamic accent colors only
+      background = const Color(0xFFF8F9FA);
+      surface = Colors.white;
+      dominant = background;
+      darkMuted = const Color(0xFFE8E9EA);
+    }
+
     return DynamicColors(
       primary: primary,
       onPrimary: onPrimary,
       secondary: albumColors.accentDark,
-      background: albumColors.backgroundPrimary,
-      surface: albumColors.surface,
+      background: background,
+      surface: surface,
       accent: albumColors.accent,
       isDark: isDark,
-      dominant: albumColors.backgroundPrimary,
+      dominant: dominant,
       lightVibrant: albumColors.accentLight,
       darkVibrant: albumColors.accentDark,
-      lightMuted: albumColors.surface,
-      darkMuted: albumColors.backgroundSecondary,
+      lightMuted: surface,
+      darkMuted: darkMuted,
       isActive: true,
     );
   }

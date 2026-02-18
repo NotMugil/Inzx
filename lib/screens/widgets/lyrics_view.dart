@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:iconsax/iconsax.dart';
 import '../../providers/music_providers.dart';
+import '../../providers/providers.dart';
 import '../../services/lyrics/lyrics_service.dart';
 import '../../services/lyrics/lyrics_models.dart';
 
@@ -34,8 +35,11 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   @override
   Widget build(BuildContext context) {
     final lyricsState = ref.watch(lyricsProvider);
+    final albumColors = ref.watch(albumColorsProvider);
+    // Use dark text in light mode (pastel background), light text in dark mode
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black87;
+    final colors = isDark ? albumColors : albumColors.toLightMode();
+    final textColor = colors.onBackground;
     final secondaryColor = textColor.withValues(alpha: 0.5);
 
     return _buildLyricsContent(lyricsState, isDark, textColor, secondaryColor);
@@ -149,8 +153,7 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
     if (currentIdx != _currentLineIndex && currentIdx >= 0) {
       _currentLineIndex = currentIdx;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients &&
-            currentIdx < _lineKeys.length) {
+        if (_scrollController.hasClients && currentIdx < _lineKeys.length) {
           final keyContext = _lineKeys[currentIdx].currentContext;
           if (keyContext != null) {
             Scrollable.ensureVisible(
@@ -231,8 +234,10 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
   }
 
   Widget _buildPlainLyrics(String lyrics, bool isDark, Color textColor) {
-    final lines =
-        lyrics.split('\n').map((l) => l.trimRight()).toList(growable: false);
+    final lines = lyrics
+        .split('\n')
+        .map((l) => l.trimRight())
+        .toList(growable: false);
 
     return ShaderMask(
       shaderCallback: (bounds) => LinearGradient(
@@ -294,8 +299,9 @@ class LyricsLine extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final lyricsState = ref.watch(lyricsProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textColor = isDark ? Colors.white : Colors.black87;
+    final albumColors = ref.watch(albumColorsProvider);
+    // Use album colors since this is displayed on album-colored surfaces
+    final textColor = albumColors.onBackground;
 
     if (!lyricsState.hasLyrics) {
       return const SizedBox.shrink();

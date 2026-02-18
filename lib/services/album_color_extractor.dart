@@ -290,6 +290,54 @@ class AlbumColors {
 
   @override
   int get hashCode => accent.hashCode ^ backgroundPrimary.hashCode;
+
+  /// Create light mode variant with pastel backgrounds and dark text
+  AlbumColors toLightMode() {
+    final accentHsl = HSLColor.fromColor(accent);
+    final bgHsl = HSLColor.fromColor(backgroundPrimary);
+
+    // Light pastel background from album hue
+    final lightBgPrimary = HSLColor.fromAHSL(
+      1,
+      bgHsl.hue,
+      (bgHsl.saturation * 0.3).clamp(0.05, 0.2),
+      0.92,
+    ).toColor();
+
+    final lightBgSecondary = HSLColor.fromAHSL(
+      1,
+      bgHsl.hue,
+      (bgHsl.saturation * 0.25).clamp(0.03, 0.15),
+      0.88,
+    ).toColor();
+
+    final lightSurface = HSLColor.fromAHSL(
+      1,
+      bgHsl.hue,
+      (bgHsl.saturation * 0.15).clamp(0.02, 0.1),
+      0.96,
+    ).toColor();
+
+    // Darker accent for light mode contrast
+    final darkAccent = HSLColor.fromAHSL(
+      1,
+      accentHsl.hue,
+      accentHsl.saturation.clamp(0.5, 0.9),
+      accentHsl.lightness.clamp(0.35, 0.5),
+    ).toColor();
+
+    return AlbumColors(
+      accent: darkAccent,
+      accentLight: accent, // Original becomes the light variant
+      accentDark: accentDark,
+      backgroundPrimary: lightBgPrimary,
+      backgroundSecondary: lightBgSecondary,
+      surface: lightSurface,
+      onBackground: const Color(0xFF1A1A1A), // Dark text
+      onSurface: const Color(0xFF1A1A1A),
+      isDefault: isDefault,
+    );
+  }
 }
 
 /// Raw color data returned from isolate (can't use Color class in isolate)

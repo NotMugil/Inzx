@@ -121,9 +121,11 @@ class _ArtistPageScreenState extends ConsumerState<ArtistPageScreen> {
     final playerService = ref.read(audioPlayerServiceProvider);
     final playbackState = ref.watch(playbackStateProvider);
     final currentTrack = ref.watch(currentTrackProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: isDark ? Colors.black : colorScheme.surface,
       body: artistAsync.when(
         loading: () => _buildLoadingState(),
         error: (e, _) => _buildErrorState('Error loading artist'),
@@ -139,12 +141,17 @@ class _ArtistPageScreenState extends ConsumerState<ArtistPageScreen> {
   }
 
   Widget _buildLoadingState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return CustomScrollView(
       slivers: [
         SliverAppBar(
           backgroundColor: Colors.transparent,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(
+              Icons.arrow_back,
+              color: isDark ? Colors.white : colorScheme.onSurface,
+            ),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -158,7 +165,7 @@ class _ArtistPageScreenState extends ConsumerState<ArtistPageScreen> {
                 height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.grey[900],
+                  color: isDark ? Colors.grey[900] : Colors.grey[200],
                 ),
                 child: widget.thumbnailUrl != null
                     ? ClipOval(
@@ -167,19 +174,27 @@ class _ArtistPageScreenState extends ConsumerState<ArtistPageScreen> {
                           fit: BoxFit.cover,
                         ),
                       )
-                    : const Icon(Icons.person, size: 80, color: Colors.white24),
+                    : Icon(
+                        Icons.person,
+                        size: 80,
+                        color: isDark
+                            ? Colors.white24
+                            : colorScheme.onSurface.withValues(alpha: 0.24),
+                      ),
               ),
               const SizedBox(height: 24),
               Text(
                 widget.artistName ?? 'Loading...',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : colorScheme.onSurface,
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 40),
-              const CircularProgressIndicator(color: Colors.white),
+              CircularProgressIndicator(
+                color: isDark ? Colors.white : colorScheme.onSurface,
+              ),
             ],
           ),
         ),
@@ -188,13 +203,28 @@ class _ArtistPageScreenState extends ConsumerState<ArtistPageScreen> {
   }
 
   Widget _buildErrorState(String message) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.white38),
+          Icon(
+            Icons.error_outline,
+            size: 64,
+            color: isDark
+                ? Colors.white38
+                : colorScheme.onSurface.withValues(alpha: 0.38),
+          ),
           const SizedBox(height: 16),
-          Text(message, style: const TextStyle(color: Colors.white70)),
+          Text(
+            message,
+            style: TextStyle(
+              color: isDark
+                  ? Colors.white70
+                  : colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
           const SizedBox(height: 24),
           TextButton(
             onPressed: () =>
@@ -226,6 +256,7 @@ class _ArtistContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasCurrentTrack = currentTrack != null;
 
     // Get dynamic theme color from artist image
@@ -257,12 +288,18 @@ class _ArtistContent extends ConsumerWidget {
                     elevation: 0,
                     pinned: false,
                     leading: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      icon: Icon(
+                        Icons.arrow_back,
+                        color: isDark ? Colors.white : colorScheme.onSurface,
+                      ),
                       onPressed: () => Navigator.pop(context),
                     ),
                     actions: [
                       IconButton(
-                        icon: const Icon(Icons.more_vert, color: Colors.white),
+                        icon: Icon(
+                          Icons.more_vert,
+                          color: isDark ? Colors.white : colorScheme.onSurface,
+                        ),
                         onPressed: () => _showOptionsSheet(context, ref),
                       ),
                     ],
@@ -340,6 +377,8 @@ class _ArtistContent extends ConsumerWidget {
     bool isArtistPlaying,
     bool isPlaying,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     final topTracks = artistData.topTracks;
 
     return Padding(
@@ -370,16 +409,20 @@ class _ArtistContent extends ConsumerWidget {
                         'w400-h400',
                       ),
                       fit: BoxFit.cover,
-                      placeholder: (_, __) =>
-                          Container(color: Colors.grey[900]),
-                      errorWidget: (_, __, ___) =>
-                          Container(color: Colors.grey[900]),
+                      placeholder: (_, __) => Container(
+                        color: isDark ? Colors.grey[900] : Colors.grey[200],
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        color: isDark ? Colors.grey[900] : Colors.grey[200],
+                      ),
                     )
                   : Container(
-                      color: Colors.grey[900],
-                      child: const Icon(
+                      color: isDark ? Colors.grey[900] : Colors.grey[200],
+                      child: Icon(
                         Icons.person,
-                        color: Colors.white38,
+                        color: isDark
+                            ? Colors.white38
+                            : colorScheme.onSurface.withValues(alpha: 0.38),
                         size: 80,
                       ),
                     ),
@@ -391,8 +434,8 @@ class _ArtistContent extends ConsumerWidget {
           Text(
             artistData.name,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : colorScheme.onSurface,
               fontSize: 28,
               fontWeight: FontWeight.bold,
               letterSpacing: -0.5,
@@ -404,7 +447,12 @@ class _ArtistContent extends ConsumerWidget {
           if (artistData.subscriberCount != null)
             Text(
               '${_formatNumber(artistData.subscriberCount!)} subscribers',
-              style: const TextStyle(color: Colors.white70, fontSize: 16),
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white70
+                    : colorScheme.onSurface.withValues(alpha: 0.7),
+                fontSize: 16,
+              ),
             ),
 
           // Description
@@ -416,7 +464,12 @@ class _ArtistContent extends ConsumerWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white54, fontSize: 14),
+                style: TextStyle(
+                  color: isDark
+                      ? Colors.white54
+                      : colorScheme.onSurface.withValues(alpha: 0.54),
+                  fontSize: 14,
+                ),
               ),
             ),
 
@@ -426,12 +479,19 @@ class _ArtistContent extends ConsumerWidget {
               margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
+              child: Text(
                 'Channel',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
+                style: TextStyle(
+                  color: isDark
+                      ? Colors.white54
+                      : colorScheme.onSurface.withValues(alpha: 0.54),
+                  fontSize: 12,
+                ),
               ),
             ),
 
@@ -441,7 +501,7 @@ class _ArtistContent extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildActionButton(Icons.shuffle, 'Shuffle', () {
+              _buildActionButton(context, Icons.shuffle, 'Shuffle', () {
                 if (topTracks.isNotEmpty) {
                   final shuffled = List<Track>.from(topTracks)..shuffle();
                   playerService.playQueue(
@@ -465,7 +525,7 @@ class _ArtistContent extends ConsumerWidget {
                     isArtistPlaying && isPlaying
                         ? Icons.pause_rounded
                         : Icons.play_arrow_rounded,
-                    color: Colors.white,
+                    color: isDark ? Colors.white : colorScheme.onSurface,
                   ),
                   iconSize: 36,
                   onPressed: () {
@@ -484,7 +544,7 @@ class _ArtistContent extends ConsumerWidget {
                 ),
               ),
 
-              _buildActionButton(Icons.radio, 'Radio', () {
+              _buildActionButton(context, Icons.radio, 'Radio', () {
                 if (topTracks.isNotEmpty) {
                   playerService.playTrack(topTracks.first, enableRadio: true);
                 }
@@ -498,7 +558,14 @@ class _ArtistContent extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionButton(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildActionButton(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Column(
@@ -508,14 +575,25 @@ class _ArtistContent extends ConsumerWidget {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white.withValues(alpha: 0.1),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.1)
+                  : Colors.black.withValues(alpha: 0.1),
             ),
-            child: Icon(icon, color: Colors.white, size: 24),
+            child: Icon(
+              icon,
+              color: isDark ? Colors.white : colorScheme.onSurface,
+              size: 24,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
+            style: TextStyle(
+              color: isDark
+                  ? Colors.white70
+                  : colorScheme.onSurface.withValues(alpha: 0.7),
+              fontSize: 12,
+            ),
           ),
         ],
       ),
@@ -523,6 +601,8 @@ class _ArtistContent extends ConsumerWidget {
   }
 
   List<Widget> _buildLocalTracksSection(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return [
       SliverToBoxAdapter(
         child: Padding(
@@ -531,10 +611,10 @@ class _ArtistContent extends ConsumerWidget {
             children: [
               Icon(Icons.download_done, size: 18, color: Colors.green[400]),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Downloaded',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -569,8 +649,13 @@ class _ArtistContent extends ConsumerWidget {
             ),
           ),
         ),
-      const SliverToBoxAdapter(
-        child: Divider(color: Colors.white24, height: 32),
+      SliverToBoxAdapter(
+        child: Divider(
+          color: isDark
+              ? Colors.white24
+              : colorScheme.onSurface.withValues(alpha: 0.24),
+          height: 32,
+        ),
       ),
     ];
   }
@@ -605,6 +690,8 @@ class _ArtistContent extends ConsumerWidget {
     WidgetRef ref,
     ArtistShelf shelf,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     final tracks = shelf.tracks;
 
     return [
@@ -616,8 +703,8 @@ class _ArtistContent extends ConsumerWidget {
             children: [
               Text(
                 shelf.title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: isDark ? Colors.white : colorScheme.onSurface,
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
@@ -647,9 +734,13 @@ class _ArtistContent extends ConsumerWidget {
                     );
                     ShelfDetailsScreen.open(context, songsShelf);
                   },
-                  child: const Text(
+                  child: Text(
                     'See all',
-                    style: TextStyle(color: Colors.white70),
+                    style: TextStyle(
+                      color: isDark
+                          ? Colors.white70
+                          : colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
                   ),
                 ),
             ],
@@ -675,11 +766,14 @@ class _ArtistContent extends ConsumerWidget {
   ) {
     final isTrackPlaying = currentTrack?.id == track.id;
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       selected: isTrackPlaying,
-      selectedTileColor: Colors.white.withValues(alpha: 0.1),
+      selectedTileColor: isDark
+          ? Colors.white.withValues(alpha: 0.1)
+          : Colors.black.withValues(alpha: 0.1),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: SizedBox(
@@ -692,7 +786,7 @@ class _ArtistContent extends ConsumerWidget {
                   memCacheWidth: 96,
                   memCacheHeight: 96,
                 )
-              : Container(color: Colors.grey[800]),
+              : Container(color: isDark ? Colors.grey[800] : Colors.grey[300]),
         ),
       ),
       title: Text(
@@ -700,7 +794,9 @@ class _ArtistContent extends ConsumerWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: isTrackPlaying ? colorScheme.primary : Colors.white,
+          color: isTrackPlaying
+              ? colorScheme.primary
+              : (isDark ? Colors.white : colorScheme.onSurface),
           fontWeight: isTrackPlaying ? FontWeight.bold : FontWeight.w500,
         ),
       ),
@@ -711,11 +807,18 @@ class _ArtistContent extends ConsumerWidget {
         style: TextStyle(
           color: isTrackPlaying
               ? colorScheme.primary.withValues(alpha: 0.7)
-              : Colors.white60,
+              : (isDark
+                    ? Colors.white60
+                    : colorScheme.onSurface.withValues(alpha: 0.6)),
         ),
       ),
       trailing: IconButton(
-        icon: const Icon(Icons.more_vert, color: Colors.white54),
+        icon: Icon(
+          Icons.more_vert,
+          color: isDark
+              ? Colors.white54
+              : colorScheme.onSurface.withValues(alpha: 0.54),
+        ),
         onPressed: () => TrackOptionsSheet.show(context, track),
       ),
       onTap: () {
@@ -729,6 +832,8 @@ class _ArtistContent extends ConsumerWidget {
   }
 
   List<Widget> _buildAlbumsShelf(BuildContext context, ArtistShelf shelf) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     final albums = shelf.albums;
 
     return [
@@ -737,8 +842,8 @@ class _ArtistContent extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
           child: Text(
             shelf.title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : colorScheme.onSurface,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -763,6 +868,8 @@ class _ArtistContent extends ConsumerWidget {
   }
 
   Widget _buildAlbumCard(BuildContext context, Album album) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: () => AlbumScreen.open(
         context,
@@ -786,7 +893,9 @@ class _ArtistContent extends ConsumerWidget {
                         imageUrl: album.thumbnailUrl!,
                         fit: BoxFit.cover,
                       )
-                    : Container(color: Colors.grey[800]),
+                    : Container(
+                        color: isDark ? Colors.grey[800] : Colors.grey[300],
+                      ),
               ),
             ),
             const SizedBox(height: 8),
@@ -794,15 +903,20 @@ class _ArtistContent extends ConsumerWidget {
               album.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: isDark ? Colors.white : colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
             Text(
               album.year ?? 'Album',
               maxLines: 1,
-              style: const TextStyle(color: Colors.white60, fontSize: 12),
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white60
+                    : colorScheme.onSurface.withValues(alpha: 0.6),
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -811,6 +925,8 @@ class _ArtistContent extends ConsumerWidget {
   }
 
   List<Widget> _buildPlaylistsShelf(BuildContext context, ArtistShelf shelf) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     final playlists = shelf.playlists;
 
     return [
@@ -819,8 +935,8 @@ class _ArtistContent extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
           child: Text(
             shelf.title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : colorScheme.onSurface,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -841,16 +957,24 @@ class _ArtistContent extends ConsumerWidget {
                         imageUrl: playlist.thumbnailUrl!,
                         fit: BoxFit.cover,
                       )
-                    : Container(color: Colors.grey[800]),
+                    : Container(
+                        color: isDark ? Colors.grey[800] : Colors.grey[300],
+                      ),
               ),
             ),
             title: Text(
               playlist.title,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: isDark ? Colors.white : colorScheme.onSurface,
+              ),
             ),
             subtitle: Text(
               playlist.author ?? 'Playlist',
-              style: const TextStyle(color: Colors.white60),
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white60
+                    : colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
             onTap: () => PlaylistScreen.open(
               context,
@@ -868,6 +992,8 @@ class _ArtistContent extends ConsumerWidget {
     BuildContext context,
     ArtistShelf shelf,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     final artists = shelf.artists;
 
     return [
@@ -876,8 +1002,8 @@ class _ArtistContent extends ConsumerWidget {
           padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
           child: Text(
             shelf.title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: isDark ? Colors.white : colorScheme.onSurface,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -914,7 +1040,11 @@ class _ArtistContent extends ConsumerWidget {
                                   imageUrl: artist.thumbnailUrl!,
                                   fit: BoxFit.cover,
                                 )
-                              : Container(color: Colors.grey[800]),
+                              : Container(
+                                  color: isDark
+                                      ? Colors.grey[800]
+                                      : Colors.grey[300],
+                                ),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -923,8 +1053,8 @@ class _ArtistContent extends ConsumerWidget {
                         maxLines: 2,
                         textAlign: TextAlign.center,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : colorScheme.onSurface,
                           fontSize: 13,
                         ),
                       ),
@@ -940,11 +1070,13 @@ class _ArtistContent extends ConsumerWidget {
   }
 
   void _showOptionsSheet(BuildContext context, WidgetRef ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     final topTracks = artistData.topTracks;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey[900],
+      backgroundColor: isDark ? Colors.grey[900] : colorScheme.surface,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -959,7 +1091,7 @@ class _ArtistContent extends ConsumerWidget {
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[700],
+                  color: isDark ? Colors.grey[700] : Colors.grey[400],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -973,29 +1105,40 @@ class _ArtistContent extends ConsumerWidget {
                             imageUrl: artistData.thumbnailUrl!,
                             fit: BoxFit.cover,
                           )
-                        : Container(color: Colors.grey[800]),
+                        : Container(
+                            color: isDark ? Colors.grey[800] : Colors.grey[300],
+                          ),
                   ),
                 ),
                 title: Text(
                   artistData.name,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 subtitle: artistData.subscriberCount != null
                     ? Text(
                         '${_formatNumber(artistData.subscriberCount!)} subscribers',
-                        style: const TextStyle(color: Colors.white54),
+                        style: TextStyle(
+                          color: isDark
+                              ? Colors.white54
+                              : colorScheme.onSurface.withValues(alpha: 0.54),
+                        ),
                       )
                     : null,
               ),
-              const Divider(color: Colors.grey),
+              Divider(color: isDark ? Colors.grey : Colors.grey[300]),
               ListTile(
-                leading: const Icon(Icons.play_arrow, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.play_arrow,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Play all',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -1009,10 +1152,15 @@ class _ArtistContent extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.shuffle, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.shuffle,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Shuffle all',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -1027,10 +1175,15 @@ class _ArtistContent extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.radio, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.radio,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Start radio',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -1040,10 +1193,15 @@ class _ArtistContent extends ConsumerWidget {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.share, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.share,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Share',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(context);

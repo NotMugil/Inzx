@@ -66,10 +66,15 @@ class _MusicAppState extends ConsumerState<MusicApp>
     final albumColors = ref.watch(albumColorsProvider);
     final hasAlbumColors = !albumColors.isDefault;
 
-    // Background with subtle tint when no album colors
-    final backgroundColor = hasAlbumColors
-        ? albumColors.backgroundSecondary
-        : (isDark ? MineColors.darkBackground : MineColors.background);
+    // Background: In dark mode use album colors, in light mode use plain white
+    final Color backgroundColor;
+    if (hasAlbumColors && isDark) {
+      backgroundColor = albumColors.backgroundSecondary;
+    } else {
+      backgroundColor = isDark
+          ? MineColors.darkBackground
+          : MineColors.background;
+    }
 
     // Accent color for nav items
     final accentColor = hasAlbumColors

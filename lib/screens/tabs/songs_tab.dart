@@ -418,7 +418,9 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : accentColor.withValues(alpha: 0.15),
+              color: isDark
+                  ? Colors.white10
+                  : accentColor.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -426,7 +428,9 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
                   ? Icons.search_off_rounded
                   : Icons.music_note_rounded,
               size: 48,
-              color: isDark ? Colors.white38 : accentColor.withValues(alpha: 0.6),
+              color: isDark
+                  ? Colors.white38
+                  : accentColor.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 24),
@@ -502,7 +506,7 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
               label: const Text('Play all'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentColor,
-                foregroundColor: Colors.white,
+                foregroundColor: MineColors.contrastTextOn(accentColor),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),

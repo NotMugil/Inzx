@@ -11,13 +11,13 @@ class MineTheme {
 
   /// Light theme (primary theme for Mine)
   static ThemeData get light => lightWithAccent(MineColors.accent);
-  
+
   /// Light theme with custom accent color
   static ThemeData lightWithAccent(Color accentColor) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      
+
       // Colors
       colorScheme: ColorScheme.light(
         primary: accentColor,
@@ -40,16 +40,16 @@ class MineTheme {
         outlineVariant: MineColors.divider,
         shadow: MineColors.shadow,
       ),
-      
+
       // Background
       scaffoldBackgroundColor: MineColors.background,
-      
+
       // Typography
       textTheme: createMineTextTheme().apply(
         bodyColor: MineColors.textPrimary,
         displayColor: MineColors.textPrimary,
       ),
-      
+
       // AppBar
       appBarTheme: const AppBarTheme(
         elevation: 0,
@@ -64,34 +64,30 @@ class MineTheme {
         titleTextStyle: MineTypography.titleLarge,
         centerTitle: false,
       ),
-      
+
       // Cards
       cardTheme: CardThemeData(
         elevation: 0,
         color: MineColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: MineSpacing.cardRadius,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: MineSpacing.cardRadius),
         margin: EdgeInsets.zero,
       ),
-      
+
       // Buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: accentColor,
-          foregroundColor: Colors.white,
+          foregroundColor: MineColors.contrastTextOn(accentColor),
           padding: const EdgeInsets.symmetric(
             horizontal: MineSpacing.xl,
             vertical: MineSpacing.base,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: MineSpacing.buttonRadius,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: MineSpacing.buttonRadius),
           textStyle: MineTypography.labelLarge,
         ),
       ),
-      
+
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: accentColor,
@@ -99,13 +95,11 @@ class MineTheme {
             horizontal: MineSpacing.base,
             vertical: MineSpacing.sm,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: MineSpacing.buttonRadius,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: MineSpacing.buttonRadius),
           textStyle: MineTypography.labelLarge,
         ),
       ),
-      
+
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: MineColors.textPrimary,
@@ -114,13 +108,11 @@ class MineTheme {
             horizontal: MineSpacing.xl,
             vertical: MineSpacing.base,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: MineSpacing.buttonRadius,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: MineSpacing.buttonRadius),
           textStyle: MineTypography.labelLarge,
         ),
       ),
-      
+
       // Icon buttons
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
@@ -130,18 +122,18 @@ class MineTheme {
           ),
         ),
       ),
-      
+
       // Floating Action Button
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 2,
         highlightElevation: 4,
         backgroundColor: accentColor,
-        foregroundColor: Colors.white,
+        foregroundColor: MineColors.contrastTextOn(accentColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(MineSpacing.radiusBase),
         ),
       ),
-      
+
       // Input fields
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -160,24 +152,15 @@ class MineTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: MineSpacing.inputRadius,
-          borderSide: BorderSide(
-            color: accentColor,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: accentColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: MineSpacing.inputRadius,
-          borderSide: const BorderSide(
-            color: MineColors.error,
-            width: 1,
-          ),
+          borderSide: const BorderSide(color: MineColors.error, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: MineSpacing.inputRadius,
-          borderSide: const BorderSide(
-            color: MineColors.error,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: MineColors.error, width: 1.5),
         ),
         hintStyle: MineTypography.bodyMedium.copyWith(
           color: MineColors.textTertiary,
@@ -186,7 +169,7 @@ class MineTheme {
           color: MineColors.textSecondary,
         ),
       ),
-      
+
       // Bottom Navigation
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         elevation: 0,
@@ -198,7 +181,7 @@ class MineTheme {
         selectedLabelStyle: MineTypography.labelSmall,
         unselectedLabelStyle: MineTypography.labelSmall,
       ),
-      
+
       // Navigation Bar (Material 3)
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
@@ -208,9 +191,7 @@ class MineTheme {
         height: 80,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return MineTypography.labelSmall.copyWith(
-              color: accentColor,
-            );
+            return MineTypography.labelSmall.copyWith(color: accentColor);
           }
           return MineTypography.labelSmall.copyWith(
             color: MineColors.textTertiary,
@@ -218,25 +199,19 @@ class MineTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return IconThemeData(
-              color: accentColor,
-              size: 24,
-            );
+            return IconThemeData(color: accentColor, size: 24);
           }
-          return const IconThemeData(
-            color: MineColors.textTertiary,
-            size: 24,
-          );
+          return const IconThemeData(color: MineColors.textTertiary, size: 24);
         }),
       ),
-      
+
       // Divider
       dividerTheme: const DividerThemeData(
         color: MineColors.divider,
         thickness: 1,
         space: 1,
       ),
-      
+
       // Bottom Sheet
       bottomSheetTheme: const BottomSheetThemeData(
         elevation: 0,
@@ -249,7 +224,7 @@ class MineTheme {
         showDragHandle: true,
         dragHandleColor: MineColors.divider,
       ),
-      
+
       // Dialog
       dialogTheme: DialogThemeData(
         elevation: 0,
@@ -260,7 +235,7 @@ class MineTheme {
         titleTextStyle: MineTypography.titleLarge,
         contentTextStyle: MineTypography.bodyMedium,
       ),
-      
+
       // Snackbar
       snackBarTheme: SnackBarThemeData(
         elevation: 0,
@@ -274,7 +249,7 @@ class MineTheme {
         behavior: SnackBarBehavior.floating,
         insetPadding: const EdgeInsets.all(MineSpacing.base),
       ),
-      
+
       // Chip
       chipTheme: ChipThemeData(
         elevation: 0,
@@ -285,18 +260,16 @@ class MineTheme {
           horizontal: MineSpacing.md,
           vertical: MineSpacing.sm,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: MineSpacing.chipRadius,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: MineSpacing.chipRadius),
       ),
-      
+
       // Progress Indicator
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: accentColor,
         linearTrackColor: MineColors.surfaceVariant,
         circularTrackColor: MineColors.surfaceVariant,
       ),
-      
+
       // Slider
       sliderTheme: SliderThemeData(
         activeTrackColor: accentColor,
@@ -305,7 +278,7 @@ class MineTheme {
         overlayColor: accentColor.withValues(alpha: 0.12),
         trackHeight: 4,
       ),
-      
+
       // Switch
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -322,7 +295,7 @@ class MineTheme {
         }),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
-      
+
       // Checkbox
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
@@ -333,11 +306,9 @@ class MineTheme {
         }),
         checkColor: WidgetStateProperty.all(Colors.white),
         side: const BorderSide(color: MineColors.border, width: 1.5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
-      
+
       // Radio
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
@@ -347,7 +318,7 @@ class MineTheme {
           return MineColors.border;
         }),
       ),
-      
+
       // ListTile
       listTileTheme: const ListTileThemeData(
         contentPadding: EdgeInsets.symmetric(
@@ -360,22 +331,20 @@ class MineTheme {
         subtitleTextStyle: MineTypography.bodySmall,
         iconColor: MineColors.textSecondary,
       ),
-      
+
       // Tooltip
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
           color: MineColors.textPrimary,
           borderRadius: BorderRadius.circular(MineSpacing.radiusSm),
         ),
-        textStyle: MineTypography.bodySmall.copyWith(
-          color: Colors.white,
-        ),
+        textStyle: MineTypography.bodySmall.copyWith(color: Colors.white),
         padding: const EdgeInsets.symmetric(
           horizontal: MineSpacing.md,
           vertical: MineSpacing.sm,
         ),
       ),
-      
+
       // Page transitions
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
@@ -386,10 +355,10 @@ class MineTheme {
           TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
         },
       ),
-      
+
       // Visual density
       visualDensity: VisualDensity.standard,
-      
+
       // Splash
       splashFactory: InkRipple.splashFactory,
     );
@@ -397,13 +366,13 @@ class MineTheme {
 
   /// Dark theme - calm, easy on the eyes
   static ThemeData get dark => darkWithAccent(MineColors.darkAccent);
-  
+
   /// Dark theme with custom accent color
   static ThemeData darkWithAccent(Color accentColor) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      
+
       // Colors
       colorScheme: ColorScheme.dark(
         primary: accentColor,
@@ -426,16 +395,16 @@ class MineTheme {
         outlineVariant: MineColors.darkDivider,
         shadow: MineColors.darkShadow,
       ),
-      
+
       // Background
       scaffoldBackgroundColor: MineColors.darkBackground,
-      
+
       // Typography
       textTheme: createMineTextTheme().apply(
         bodyColor: MineColors.darkTextPrimary,
         displayColor: MineColors.darkTextPrimary,
       ),
-      
+
       // AppBar
       appBarTheme: const AppBarTheme(
         elevation: 0,
@@ -456,34 +425,30 @@ class MineTheme {
         ),
         centerTitle: false,
       ),
-      
+
       // Cards
       cardTheme: CardThemeData(
         elevation: 0,
         color: MineColors.darkSurface,
-        shape: RoundedRectangleBorder(
-          borderRadius: MineSpacing.cardRadius,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: MineSpacing.cardRadius),
         margin: EdgeInsets.zero,
       ),
-      
+
       // Buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: accentColor,
-          foregroundColor: Colors.white,
+          foregroundColor: MineColors.contrastTextOn(accentColor),
           padding: const EdgeInsets.symmetric(
             horizontal: MineSpacing.xl,
             vertical: MineSpacing.base,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: MineSpacing.buttonRadius,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: MineSpacing.buttonRadius),
           textStyle: MineTypography.labelLarge,
         ),
       ),
-      
+
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: accentColor,
@@ -491,13 +456,11 @@ class MineTheme {
             horizontal: MineSpacing.base,
             vertical: MineSpacing.sm,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: MineSpacing.buttonRadius,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: MineSpacing.buttonRadius),
           textStyle: MineTypography.labelLarge,
         ),
       ),
-      
+
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: MineColors.darkTextPrimary,
@@ -506,13 +469,11 @@ class MineTheme {
             horizontal: MineSpacing.xl,
             vertical: MineSpacing.base,
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: MineSpacing.buttonRadius,
-          ),
+          shape: RoundedRectangleBorder(borderRadius: MineSpacing.buttonRadius),
           textStyle: MineTypography.labelLarge,
         ),
       ),
-      
+
       // Icon buttons
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
@@ -522,18 +483,18 @@ class MineTheme {
           ),
         ),
       ),
-      
+
       // Floating Action Button
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 2,
         highlightElevation: 4,
         backgroundColor: accentColor,
-        foregroundColor: Colors.white,
+        foregroundColor: MineColors.contrastTextOn(accentColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(MineSpacing.radiusBase),
         ),
       ),
-      
+
       // Input fields
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -552,24 +513,15 @@ class MineTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: MineSpacing.inputRadius,
-          borderSide: BorderSide(
-            color: accentColor,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: accentColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: MineSpacing.inputRadius,
-          borderSide: const BorderSide(
-            color: MineColors.error,
-            width: 1,
-          ),
+          borderSide: const BorderSide(color: MineColors.error, width: 1),
         ),
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: MineSpacing.inputRadius,
-          borderSide: const BorderSide(
-            color: MineColors.error,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: MineColors.error, width: 1.5),
         ),
         hintStyle: MineTypography.bodyMedium.copyWith(
           color: MineColors.darkTextTertiary,
@@ -578,7 +530,7 @@ class MineTheme {
           color: MineColors.darkTextSecondary,
         ),
       ),
-      
+
       // Bottom Navigation
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         elevation: 0,
@@ -590,7 +542,7 @@ class MineTheme {
         selectedLabelStyle: MineTypography.labelSmall,
         unselectedLabelStyle: MineTypography.labelSmall,
       ),
-      
+
       // Navigation Bar (Material 3)
       navigationBarTheme: NavigationBarThemeData(
         elevation: 0,
@@ -600,9 +552,7 @@ class MineTheme {
         height: 80,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return MineTypography.labelSmall.copyWith(
-              color: accentColor,
-            );
+            return MineTypography.labelSmall.copyWith(color: accentColor);
           }
           return MineTypography.labelSmall.copyWith(
             color: MineColors.darkTextTertiary,
@@ -610,10 +560,7 @@ class MineTheme {
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return IconThemeData(
-              color: accentColor,
-              size: 24,
-            );
+            return IconThemeData(color: accentColor, size: 24);
           }
           return const IconThemeData(
             color: MineColors.darkTextTertiary,
@@ -621,14 +568,14 @@ class MineTheme {
           );
         }),
       ),
-      
+
       // Divider
       dividerTheme: const DividerThemeData(
         color: MineColors.darkDivider,
         thickness: 1,
         space: 1,
       ),
-      
+
       // Bottom Sheet
       bottomSheetTheme: const BottomSheetThemeData(
         elevation: 0,
@@ -641,7 +588,7 @@ class MineTheme {
         showDragHandle: true,
         dragHandleColor: MineColors.darkDivider,
       ),
-      
+
       // Dialog
       dialogTheme: DialogThemeData(
         elevation: 0,
@@ -656,7 +603,7 @@ class MineTheme {
           color: MineColors.darkTextPrimary,
         ),
       ),
-      
+
       // Snackbar
       snackBarTheme: SnackBarThemeData(
         elevation: 0,
@@ -670,7 +617,7 @@ class MineTheme {
         behavior: SnackBarBehavior.floating,
         insetPadding: const EdgeInsets.all(MineSpacing.base),
       ),
-      
+
       // Chip
       chipTheme: ChipThemeData(
         elevation: 0,
@@ -683,18 +630,16 @@ class MineTheme {
           horizontal: MineSpacing.md,
           vertical: MineSpacing.sm,
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: MineSpacing.chipRadius,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: MineSpacing.chipRadius),
       ),
-      
+
       // Progress Indicator
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: accentColor,
         linearTrackColor: MineColors.darkSurfaceVariant,
         circularTrackColor: MineColors.darkSurfaceVariant,
       ),
-      
+
       // Slider
       sliderTheme: SliderThemeData(
         activeTrackColor: accentColor,
@@ -703,7 +648,7 @@ class MineTheme {
         overlayColor: accentColor.withValues(alpha: 0.2),
         trackHeight: 4,
       ),
-      
+
       // Switch
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -720,7 +665,7 @@ class MineTheme {
         }),
         trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       ),
-      
+
       // Checkbox
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
@@ -731,11 +676,9 @@ class MineTheme {
         }),
         checkColor: WidgetStateProperty.all(Colors.white),
         side: const BorderSide(color: MineColors.darkBorder, width: 1.5),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
-      
+
       // Radio
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((states) {
@@ -745,7 +688,7 @@ class MineTheme {
           return MineColors.darkBorder;
         }),
       ),
-      
+
       // ListTile
       listTileTheme: ListTileThemeData(
         contentPadding: const EdgeInsets.symmetric(
@@ -762,7 +705,7 @@ class MineTheme {
         ),
         iconColor: MineColors.darkTextSecondary,
       ),
-      
+
       // Tooltip
       tooltipTheme: TooltipThemeData(
         decoration: BoxDecoration(
@@ -777,7 +720,7 @@ class MineTheme {
           vertical: MineSpacing.sm,
         ),
       ),
-      
+
       // Page transitions
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
@@ -788,10 +731,10 @@ class MineTheme {
           TargetPlatform.linux: CupertinoPageTransitionsBuilder(),
         },
       ),
-      
+
       // Visual density
       visualDensity: VisualDensity.standard,
-      
+
       // Splash
       splashFactory: InkRipple.splashFactory,
     );
@@ -805,9 +748,7 @@ class MineTheme {
         surface: MineColors.windDownSurface,
         onSurface: MineColors.windDownText,
       ),
-      cardTheme: light.cardTheme.copyWith(
-        color: MineColors.windDownSurface,
-      ),
+      cardTheme: light.cardTheme.copyWith(color: MineColors.windDownSurface),
     );
   }
 
@@ -819,9 +760,7 @@ class MineTheme {
         surface: MineColors.darkWindDownSurface,
         onSurface: MineColors.darkWindDownText,
       ),
-      cardTheme: dark.cardTheme.copyWith(
-        color: MineColors.darkWindDownSurface,
-      ),
+      cardTheme: dark.cardTheme.copyWith(color: MineColors.darkWindDownSurface),
     );
   }
 }

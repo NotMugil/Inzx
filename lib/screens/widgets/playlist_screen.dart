@@ -10,6 +10,7 @@ import '../../services/download_service.dart';
 import 'track_options_sheet.dart';
 import 'mini_player.dart';
 import 'now_playing_screen.dart';
+import '../../core/design_system/design_system.dart';
 
 // NOTE: We use ytMusicPlaylistProvider from ytmusic_providers.dart
 // which uses the shared innerTubeServiceProvider singleton.
@@ -96,7 +97,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
     if (widget.isOfflineDownloaded) {
       final playlist = widget.buildOfflinePlaylist();
       return Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: isDark ? Colors.black : colorScheme.surface,
         body: _buildContent(
           context,
           ref,
@@ -112,7 +113,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
     final playlistAsync = ref.watch(ytMusicPlaylistProvider(widget.playlistId));
 
     return Scaffold(
-      backgroundColor: Colors.black, // Dark background as per mockup
+      backgroundColor: isDark ? Colors.black : colorScheme.surface,
       body: playlistAsync.when(
         loading: () => _buildLoadingState(
           widget.playlistTitle,
@@ -250,8 +251,12 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                     fit: BoxFit.cover,
                     memCacheWidth: 100, // Very small for blur effect
                     memCacheHeight: 100,
-                    color: Colors.black.withValues(alpha: 0.5),
-                    colorBlendMode: BlendMode.darken,
+                    color: (isDark ? Colors.black : Colors.white).withValues(
+                      alpha: 0.5,
+                    ),
+                    colorBlendMode: isDark
+                        ? BlendMode.darken
+                        : BlendMode.lighten,
                   ),
                   // Gradient overlay instead of expensive BackdropFilter
                   Container(
@@ -260,9 +265,15 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         colors: [
-                          Colors.black.withValues(alpha: 0.2),
-                          Colors.black.withValues(alpha: 0.6),
-                          Colors.black.withValues(alpha: 0.9),
+                          (isDark ? Colors.black : Colors.white).withValues(
+                            alpha: 0.2,
+                          ),
+                          (isDark ? Colors.black : Colors.white).withValues(
+                            alpha: 0.6,
+                          ),
+                          (isDark ? Colors.black : Colors.white).withValues(
+                            alpha: 0.9,
+                          ),
                         ],
                         stops: const [0.0, 0.5, 1.0],
                       ),
@@ -282,13 +293,18 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                   // App Bar with Back and Search
                   SliverAppBar(
                     backgroundColor: _isSearching
-                        ? Colors.black.withValues(alpha: 0.8)
+                        ? (isDark ? Colors.black : Colors.white).withValues(
+                            alpha: 0.8,
+                          )
                         : Colors.transparent,
                     elevation: 0,
                     pinned:
                         true, // Pin when searching? Or always? Let's pin when searching for better UX
                     leading: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      icon: Icon(
+                        Icons.arrow_back,
+                        color: isDark ? Colors.white : colorScheme.onSurface,
+                      ),
                       onPressed: () {
                         if (_isSearching) {
                           setState(() {
@@ -305,10 +321,20 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                         ? TextField(
                             controller: _searchController,
                             autofocus: true,
-                            style: const TextStyle(color: Colors.white),
-                            decoration: const InputDecoration(
+                            style: TextStyle(
+                              color: isDark
+                                  ? Colors.white
+                                  : colorScheme.onSurface,
+                            ),
+                            decoration: InputDecoration(
                               hintText: 'Find in playlist...',
-                              hintStyle: TextStyle(color: Colors.white54),
+                              hintStyle: TextStyle(
+                                color: isDark
+                                    ? Colors.white54
+                                    : colorScheme.onSurface.withValues(
+                                        alpha: 0.54,
+                                      ),
+                              ),
                               border: InputBorder.none,
                             ),
                             onChanged: (value) {
@@ -321,7 +347,12 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                     actions: [
                       if (!_isSearching)
                         IconButton(
-                          icon: const Icon(Icons.search, color: Colors.white),
+                          icon: Icon(
+                            Icons.search,
+                            color: isDark
+                                ? Colors.white
+                                : colorScheme.onSurface,
+                          ),
                           onPressed: () {
                             setState(() {
                               _isSearching = true;
@@ -330,7 +361,12 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                         )
                       else
                         IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white),
+                          icon: Icon(
+                            Icons.close,
+                            color: isDark
+                                ? Colors.white
+                                : colorScheme.onSurface,
+                          ),
                           onPressed: () {
                             setState(() {
                               _isSearching = false;
@@ -372,16 +408,26 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                                     ? CachedNetworkImage(
                                         imageUrl: highResThumb,
                                         fit: BoxFit.cover,
-                                        placeholder: (_, __) =>
-                                            Container(color: Colors.grey[900]),
-                                        errorWidget: (_, __, ___) =>
-                                            Container(color: Colors.grey[900]),
+                                        placeholder: (_, __) => Container(
+                                          color: isDark
+                                              ? Colors.grey[900]
+                                              : Colors.grey[200],
+                                        ),
+                                        errorWidget: (_, __, ___) => Container(
+                                          color: isDark
+                                              ? Colors.grey[900]
+                                              : Colors.grey[200],
+                                        ),
                                       )
                                     : Container(
-                                        color: Colors.grey[900],
-                                        child: const Icon(
+                                        color: isDark
+                                            ? Colors.grey[900]
+                                            : Colors.grey[200],
+                                        child: Icon(
                                           Icons.music_note,
-                                          color: Colors.white,
+                                          color: isDark
+                                              ? Colors.white
+                                              : colorScheme.onSurface,
                                           size: 80,
                                         ),
                                       ),
@@ -393,8 +439,10 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                             Text(
                               playlist.title,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: isDark
+                                    ? Colors.white
+                                    : colorScheme.onSurface,
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: -0.5,
@@ -406,8 +454,12 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                             Text(
                               playlist.author ?? 'YouTube Music',
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.white70,
+                              style: TextStyle(
+                                color: isDark
+                                    ? Colors.white70
+                                    : colorScheme.onSurface.withValues(
+                                        alpha: 0.7,
+                                      ),
                                 fontSize: 16,
                               ),
                             ),
@@ -425,8 +477,12 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white54,
+                                  style: TextStyle(
+                                    color: isDark
+                                        ? Colors.white54
+                                        : colorScheme.onSurface.withValues(
+                                            alpha: 0.54,
+                                          ),
                                     fontSize: 14,
                                   ),
                                 ),
@@ -437,40 +493,39 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
-                                _buildCircleButton(
-                                  Icons.download_rounded,
-                                  () {
-                                    if (context == null) return;
-                                    _downloadPlaylist(
-                                      context,
-                                      ref,
-                                      playlist,
-                                      allTracks,
-                                    );
-                                  },
-                                ),
-                                _buildCircleButton(
-                                  Icons.add_box_outlined,
-                                  () {
-                                    if (context == null) return;
-                                    _addPlaylistToQueue(
-                                      context,
-                                      playerService,
-                                      allTracks,
-                                    );
-                                  },
-                                ),
+                                _buildCircleButton(Icons.download_rounded, () {
+                                  if (context == null) return;
+                                  _downloadPlaylist(
+                                    context,
+                                    ref,
+                                    playlist,
+                                    allTracks,
+                                  );
+                                }),
+                                _buildCircleButton(Icons.add_box_outlined, () {
+                                  if (context == null) return;
+                                  _addPlaylistToQueue(
+                                    context,
+                                    playerService,
+                                    allTracks,
+                                  );
+                                }),
 
                                 // Play Button (Toggle Play/Pause)
                                 Container(
                                   height: 72,
                                   width: 72,
-                                  decoration: const BoxDecoration(
+                                  decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: Colors.white,
+                                    color: isDark ? Colors.white : Colors.black,
                                   ),
                                   child: IconButton(
-                                    icon: Icon(playIcon, color: Colors.black),
+                                    icon: Icon(
+                                      playIcon,
+                                      color: isDark
+                                          ? Colors.black
+                                          : Colors.white,
+                                    ),
                                     iconSize: 42,
                                     onPressed: () {
                                       if (isLoading ||
@@ -503,19 +558,16 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                                   Icons.share_outlined,
                                   () => _sharePlaylist(playlist),
                                 ),
-                                _buildCircleButton(
-                                  Icons.more_vert_rounded,
-                                  () {
-                                    if (context == null) return;
-                                    _showPlaylistOptions(
-                                      context,
-                                      ref,
-                                      playlist,
-                                      allTracks,
-                                      playerService,
-                                    );
-                                  },
-                                ),
+                                _buildCircleButton(Icons.more_vert_rounded, () {
+                                  if (context == null) return;
+                                  _showPlaylistOptions(
+                                    context,
+                                    ref,
+                                    playlist,
+                                    allTracks,
+                                    playerService,
+                                  );
+                                }),
                               ],
                             ),
                             const SizedBox(height: 32),
@@ -526,9 +578,11 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
 
                   // Tracks List (Filtered or Full)
                   if (isLoading)
-                    const SliverFillRemaining(
+                    SliverFillRemaining(
                       child: Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+                        child: CircularProgressIndicator(
+                          color: isDark ? Colors.white : colorScheme.primary,
+                        ),
                       ),
                     )
                   else if (displayTracks.isEmpty)
@@ -538,7 +592,11 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                           _isSearching
                               ? 'No matching tracks'
                               : 'No tracks found',
-                          style: const TextStyle(color: Colors.white54),
+                          style: TextStyle(
+                            color: isDark
+                                ? Colors.white54
+                                : colorScheme.onSurface.withValues(alpha: 0.54),
+                          ),
                         ),
                       ),
                     )
@@ -556,7 +614,10 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                           ),
                           // Selected color if playing
                           selected: isTrackPlaying,
-                          selectedTileColor: Colors.white.withValues(alpha: 0.1),
+                          selectedTileColor:
+                              (isDark ? Colors.white : Colors.black).withValues(
+                                alpha: 0.1,
+                              ),
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: SizedBox(
@@ -571,10 +632,17 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                                       fadeInDuration: const Duration(
                                         milliseconds: 150,
                                       ),
-                                      errorWidget: (_, __, ___) =>
-                                          Container(color: Colors.grey[800]),
+                                      errorWidget: (_, __, ___) => Container(
+                                        color: isDark
+                                            ? Colors.grey[800]
+                                            : Colors.grey[300],
+                                      ),
                                     )
-                                  : Container(color: Colors.grey[800]),
+                                  : Container(
+                                      color: isDark
+                                          ? Colors.grey[800]
+                                          : Colors.grey[300],
+                                    ),
                             ),
                           ),
                           title: Text(
@@ -584,7 +652,9 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                             style: TextStyle(
                               color: isTrackPlaying
                                   ? colorScheme.primary
-                                  : Colors.white,
+                                  : (isDark
+                                        ? Colors.white
+                                        : colorScheme.onSurface),
                               fontSize: 16,
                               fontWeight: isTrackPlaying
                                   ? FontWeight.bold
@@ -598,14 +668,22 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                             style: TextStyle(
                               color: isTrackPlaying
                                   ? colorScheme.primary.withValues(alpha: 0.7)
-                                  : Colors.white60,
+                                  : (isDark
+                                        ? Colors.white60
+                                        : colorScheme.onSurface.withValues(
+                                            alpha: 0.6,
+                                          )),
                               fontSize: 14,
                             ),
                           ),
                           trailing: IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.more_vert,
-                              color: Colors.white54,
+                              color: isDark
+                                  ? Colors.white54
+                                  : colorScheme.onSurface.withValues(
+                                      alpha: 0.54,
+                                    ),
                             ),
                             onPressed: () =>
                                 TrackOptionsSheet.show(context, track),
@@ -645,15 +723,17 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
   }
 
   Widget _buildCircleButton(IconData icon, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       height: 48,
       width: 48,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: 0.1),
+        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
       ),
       child: IconButton(
-        icon: Icon(icon, color: Colors.white),
+        icon: Icon(icon, color: isDark ? Colors.white : colorScheme.onSurface),
         onPressed: onTap,
       ),
     );
@@ -661,10 +741,7 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
 
   void _sharePlaylist(Playlist playlist) {
     final url = 'https://music.youtube.com/playlist?list=${playlist.id}';
-    Share.share(
-      '${playlist.title}\n$url',
-      subject: playlist.title,
-    );
+    Share.share('${playlist.title}\n$url', subject: playlist.title);
   }
 
   void _downloadPlaylist(
@@ -719,9 +796,11 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
     List<Track> tracks,
     dynamic playerService,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.grey[900],
+      backgroundColor: isDark ? Colors.grey[900] : Colors.grey[200],
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -736,13 +815,21 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[700],
+                  color: isDark ? Colors.grey[700] : Colors.grey[400],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.play_arrow, color: Colors.white),
-                title: const Text('Play', style: TextStyle(color: Colors.white)),
+                leading: Icon(
+                  Icons.play_arrow,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
+                  'Play',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   if (playerService != null && tracks.isNotEmpty) {
@@ -755,10 +842,15 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.shuffle, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.shuffle,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Shuffle',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -773,10 +865,15 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.playlist_add, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.playlist_add,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Add to queue',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -784,10 +881,15 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.download, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.download,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Download playlist',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -795,10 +897,15 @@ class _PlaylistScreenState extends ConsumerState<PlaylistScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.share, color: Colors.white),
-                title: const Text(
+                leading: Icon(
+                  Icons.share,
+                  color: isDark ? Colors.white : colorScheme.onSurface,
+                ),
+                title: Text(
                   'Share',
-                  style: TextStyle(color: Colors.white),
+                  style: TextStyle(
+                    color: isDark ? Colors.white : colorScheme.onSurface,
+                  ),
                 ),
                 onTap: () {
                   Navigator.pop(ctx);

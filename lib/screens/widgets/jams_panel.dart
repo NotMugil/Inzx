@@ -7,6 +7,7 @@ import 'package:marquee/marquee.dart';
 import '../../providers/providers.dart';
 import '../../providers/jams_provider.dart';
 import '../../services/jams/jams_models.dart';
+import '../../core/design_system/colors.dart';
 
 /// Jams panel shown as a bottom sheet from Now Playing
 class JamsPanel extends ConsumerStatefulWidget {
@@ -169,7 +170,7 @@ class _JamsPanelState extends ConsumerState<JamsPanel> {
             label: const Text('Sign in with Google'),
             style: ElevatedButton.styleFrom(
               backgroundColor: widget.accentColor,
-              foregroundColor: Colors.white,
+              foregroundColor: MineColors.contrastTextOn(widget.accentColor),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
@@ -234,7 +235,7 @@ class _JamsPanelState extends ConsumerState<JamsPanel> {
             label: Text(state.isLoading ? 'Starting...' : 'Start a Jam'),
             style: ElevatedButton.styleFrom(
               backgroundColor: widget.accentColor,
-              foregroundColor: Colors.white,
+              foregroundColor: MineColors.contrastTextOn(widget.accentColor),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -247,15 +248,21 @@ class _JamsPanelState extends ConsumerState<JamsPanel> {
         // Divider
         Row(
           children: [
-            Expanded(child: Divider(color: widget.textColor.withValues(alpha: 0.2))),
+            Expanded(
+              child: Divider(color: widget.textColor.withValues(alpha: 0.2)),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
                 'or',
-                style: TextStyle(color: widget.textColor.withValues(alpha: 0.5)),
+                style: TextStyle(
+                  color: widget.textColor.withValues(alpha: 0.5),
+                ),
               ),
             ),
-            Expanded(child: Divider(color: widget.textColor.withValues(alpha: 0.2))),
+            Expanded(
+              child: Divider(color: widget.textColor.withValues(alpha: 0.2)),
+            ),
           ],
         ),
         const SizedBox(height: 16),
@@ -361,7 +368,9 @@ class _JamsPanelState extends ConsumerState<JamsPanel> {
           decoration: BoxDecoration(
             color: widget.accentColor.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: widget.accentColor.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: widget.accentColor.withValues(alpha: 0.3),
+            ),
           ),
           child: Column(
             children: [

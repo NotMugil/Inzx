@@ -8,6 +8,7 @@ import '../providers/providers.dart';
 import '../providers/music_providers.dart';
 import '../providers/jams_provider.dart';
 import '../services/jams/jams_models.dart';
+import '../core/design_system/colors.dart';
 
 /// Jams screen - create or join collaborative listening sessions
 class JamsScreen extends ConsumerStatefulWidget {
@@ -48,14 +49,18 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
     final jamsUIState = ref.watch(jamsNotifierProvider);
     final albumColors = ref.watch(albumColorsProvider);
 
-    // Use dynamic colors if available
+    // Use dynamic colors if available, but respect light/dark mode
     final hasAlbumColors = !albumColors.isDefault;
-    final backgroundColor = hasAlbumColors
-        ? albumColors.backgroundPrimary
-        : (isDark ? Colors.black : Colors.grey.shade50);
-    final textColor = hasAlbumColors
-        ? albumColors.onBackground
-        : (isDark ? Colors.white : Colors.black);
+    final Color backgroundColor;
+    final Color textColor;
+
+    if (hasAlbumColors && isDark) {
+      backgroundColor = albumColors.backgroundPrimary;
+      textColor = albumColors.onBackground;
+    } else {
+      backgroundColor = isDark ? Colors.black : Colors.grey.shade50;
+      textColor = isDark ? Colors.white : Colors.black;
+    }
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -82,9 +87,10 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
   /// Prompt to sign in with Google
   Widget _buildSignInPrompt(bool isDark, AlbumColors albumColors) {
     final hasAlbumColors = !albumColors.isDefault;
-    final textColor = hasAlbumColors
-        ? albumColors.onBackground
-        : (isDark ? Colors.white : Colors.black);
+    // Respect light/dark mode for text colors
+    final textColor = isDark
+        ? (hasAlbumColors ? albumColors.onBackground : Colors.white)
+        : Colors.black;
     final secondaryColor = textColor.withValues(alpha: 0.7);
     final accentColor = hasAlbumColors ? albumColors.accent : Colors.purple;
 
@@ -127,7 +133,7 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
               label: const Text('Sign in with Google'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentColor,
-                foregroundColor: Colors.white,
+                foregroundColor: MineColors.contrastTextOn(accentColor),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 16,
@@ -147,13 +153,14 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
     AlbumColors albumColors,
   ) {
     final hasAlbumColors = !albumColors.isDefault;
-    final textColor = hasAlbumColors
-        ? albumColors.onBackground
-        : (isDark ? Colors.white : Colors.black);
+    // Respect light/dark mode for text colors
+    final textColor = isDark
+        ? (hasAlbumColors ? albumColors.onBackground : Colors.white)
+        : Colors.black;
     final secondaryColor = textColor.withValues(alpha: 0.7);
     final accentColor = hasAlbumColors ? albumColors.accent : Colors.purple;
     final surfaceColor = hasAlbumColors
-        ? albumColors.surface.withValues(alpha: 0.5)
+        ? albumColors.surface.withValues(alpha: isDark ? 0.5 : 0.15)
         : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white);
 
     return SingleChildScrollView(
@@ -296,22 +303,22 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
                       disabledBackgroundColor: accentColor.withValues(
                         alpha: 0.3,
                       ),
-                      foregroundColor: Colors.white,
-                      disabledForegroundColor: Colors.white.withValues(
-                        alpha: 0.5,
-                      ),
+                      foregroundColor: MineColors.contrastTextOn(accentColor),
+                      disabledForegroundColor: MineColors.contrastTextOn(
+                        accentColor,
+                      ).withValues(alpha: 0.5),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     child: uiState.isLoading && _isJoining
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: MineColors.contrastTextOn(accentColor),
                             ),
                           )
                         : const Text('Join'),
@@ -360,12 +367,13 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
     AlbumColors? albumColors,
   }) {
     final hasAlbumColors = albumColors != null && !albumColors.isDefault;
-    final textColor = hasAlbumColors
-        ? albumColors.onBackground
-        : (isDark ? Colors.white : Colors.black);
+    // Respect light/dark mode
+    final textColor = isDark
+        ? (hasAlbumColors ? albumColors.onBackground : Colors.white)
+        : Colors.black;
     final secondaryColor = textColor.withValues(alpha: 0.7);
     final surfaceColor = hasAlbumColors
-        ? albumColors.surface.withValues(alpha: 0.5)
+        ? albumColors.surface.withValues(alpha: isDark ? 0.5 : 0.15)
         : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white);
 
     return Material(
@@ -438,9 +446,10 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
   ) {
     final isHost = ref.watch(isJamHostProvider);
     final hasAlbumColors = !albumColors.isDefault;
-    final textColor = hasAlbumColors
-        ? albumColors.onBackground
-        : (isDark ? Colors.white : Colors.black);
+    // Respect light/dark mode
+    final textColor = isDark
+        ? (hasAlbumColors ? albumColors.onBackground : Colors.white)
+        : Colors.black;
     final secondaryColor = textColor.withValues(alpha: 0.7);
     final accentColor = hasAlbumColors ? albumColors.accent : Colors.purple;
 
@@ -642,12 +651,13 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
     final canControlPlayback = ref.watch(canControlJamPlaybackProvider);
     final jamsService = ref.watch(jamsServiceProvider);
     final hasAlbumColors = !albumColors.isDefault;
-    final textColor = hasAlbumColors
-        ? albumColors.onBackground
-        : (isDark ? Colors.white : Colors.black);
+    // Respect light/dark mode
+    final textColor = isDark
+        ? (hasAlbumColors ? albumColors.onBackground : Colors.white)
+        : Colors.black;
     final secondaryColor = textColor.withValues(alpha: 0.7);
     final surfaceColor = hasAlbumColors
-        ? albumColors.surface.withValues(alpha: 0.3)
+        ? albumColors.surface.withValues(alpha: isDark ? 0.3 : 0.1)
         : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white);
     final accentColor = hasAlbumColors ? albumColors.accent : Colors.purple;
 
@@ -883,13 +893,14 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
   ) {
     final track = playback.currentTrack!;
     final hasAlbumColors = !albumColors.isDefault;
-    final textColor = hasAlbumColors
-        ? albumColors.onBackground
-        : (isDark ? Colors.white : Colors.black);
+    // Respect light/dark mode
+    final textColor = isDark
+        ? (hasAlbumColors ? albumColors.onBackground : Colors.white)
+        : Colors.black;
     final secondaryColor = textColor.withValues(alpha: 0.7);
     final accentColor = hasAlbumColors ? albumColors.accent : Colors.purple;
     final surfaceColor = hasAlbumColors
-        ? albumColors.surface.withValues(alpha: 0.5)
+        ? albumColors.surface.withValues(alpha: isDark ? 0.5 : 0.15)
         : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white);
 
     return Container(
