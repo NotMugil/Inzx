@@ -83,12 +83,6 @@ class JamsSyncController {
         }
         unawaited(_jamsService.requestStateSync(reason: 'app_resumed'));
         unawaited(_jamsService.keepAlive(reason: 'app_resumed'));
-      } else if (state == AppLifecycleState.paused ||
-          state == AppLifecycleState.inactive) {
-        if (kDebugMode) {
-          print('JamsSyncController: App backgrounded, sending keepalive');
-        }
-        unawaited(_jamsService.keepAlive(reason: 'app_backgrounded'));
       }
     },
   );

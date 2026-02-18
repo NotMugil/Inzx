@@ -20,9 +20,11 @@ class JamsBackgroundService with WidgetsBindingObserver {
   bool _isInBackground = false;
   bool _isServiceRunning = false;
   int _currentParticipantCount = 1;
+  bool _didSendBackgroundEntryKeepAlive = false;
   dynamic _attachedService;
   Timer? _backgroundKeepAliveTimer;
-  static const Duration _backgroundKeepAliveInterval = Duration(seconds: 12);
+  // Faster background health checks to reduce jam recovery latency.
+  static const Duration _backgroundKeepAliveInterval = Duration(seconds: 4);
 
   /// Initialize the background service
   Future<void> initialize() async {
@@ -157,13 +159,18 @@ class JamsBackgroundService with WidgetsBindingObserver {
     switch (state) {
       case AppLifecycleState.paused:
       case AppLifecycleState.inactive:
+        final enteringBackground = !_isInBackground;
         _isInBackground = true;
         _startBackgroundKeepAlive();
-        unawaited(_requestKeepAlive('app_backgrounded'));
+        if (enteringBackground || !_didSendBackgroundEntryKeepAlive) {
+          _didSendBackgroundEntryKeepAlive = true;
+          unawaited(_requestKeepAlive('app_backgrounded'));
+        }
         break;
 
       case AppLifecycleState.resumed:
         _isInBackground = false;
+        _didSendBackgroundEntryKeepAlive = false;
         _stopBackgroundKeepAlive();
         unawaited(_requestKeepAlive('app_resumed'));
         break;
@@ -194,7 +201,13 @@ class JamsBackgroundService with WidgetsBindingObserver {
 
   Future<void> _requestKeepAlive(String reason) async {
     final service = _attachedService;
-    if (service == null) return;
+    if (service == null) {
+      jamsLog(
+        'Keepalive skipped: no attached service (reason=$reason)',
+        tag: 'BackgroundService',
+      );
+      return;
+    }
     try {
       jamsLog(
         'Requesting keepalive from attached service (reason=$reason)',

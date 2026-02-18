@@ -42,14 +42,27 @@ class JamsService {
   Timer? _reconnectTimer;
   bool _isLeavingSession = false;
   bool _isReconnectInFlight = false;
+  DateTime? _reconnectInFlightSince;
   int _reconnectAttempts = 0;
   static const int _maxReconnectDelaySeconds = 30;
+  static const Duration _maxReconnectInFlightDuration = Duration(seconds: 6);
   DateTime _lastInboundRealtimeAt = DateTime.now();
   DateTime? _lastKeepAliveReconnectAt;
+  DateTime? _lastBackgroundEntryReconnectAt;
+  // Tuned for faster background recovery.
   static const Duration _maxInboundSilenceBeforeReconnect = Duration(
-    seconds: 20,
+    seconds: 8,
   );
-  static const Duration _keepAliveReconnectCooldown = Duration(seconds: 25);
+  static const Duration _keepAliveReconnectCooldown = Duration(seconds: 10);
+  static const Duration _keepAliveReconnectCooldownWhenDisconnected = Duration(
+    seconds: 4,
+  );
+  static const Duration _backgroundEntryReconnectCooldown = Duration(
+    seconds: 15,
+  );
+  static const Duration _hostBackgroundEntryReconnectCooldown = Duration(
+    seconds: 8,
+  );
 
   // Monotonic state version for ordering/recovery across clients
   int _stateVersion = 0;
@@ -62,7 +75,11 @@ class JamsService {
     required this.oderId,
     required this.userName,
     this.userPhotoUrl,
-  });
+  }) {
+    // Keep background bridge attached for lifecycle keepalive callbacks.
+    // keepAlive() itself is session-gated, so this is safe when idle.
+    _backgroundService.attachService(this);
+  }
 
   // ============ Public Getters ============
 
@@ -193,10 +210,28 @@ class JamsService {
     }
   }
 
+  bool _shouldBlockForReconnectInFlight(String reason) {
+    if (!_isReconnectInFlight) return false;
+
+    final startedAt = _reconnectInFlightSince;
+    if (startedAt != null &&
+        DateTime.now().difference(startedAt) > _maxReconnectInFlightDuration) {
+      if (kDebugMode) {
+        print(
+          'JamsService: clearing stale reconnect lock (${DateTime.now().difference(startedAt).inSeconds}s, reason=$reason)',
+        );
+      }
+      _isReconnectInFlight = false;
+      _reconnectInFlightSince = null;
+      return false;
+    }
+    return true;
+  }
+
   void _scheduleReconnect(String reason) {
     if (_isLeavingSession || _currentSessionCode == null) return;
     if (_reconnectTimer != null) return;
-    if (_isReconnectInFlight) return;
+    if (_shouldBlockForReconnectInFlight(reason)) return;
 
     _reconnectAttempts += 1;
     final exp = min(_reconnectAttempts, 5); // 1,2,4,8,16 then clamp
@@ -223,7 +258,7 @@ class JamsService {
 
   Future<void> _attemptReconnect(String reason) async {
     if (_isLeavingSession || _currentSessionCode == null) return;
-    if (_isReconnectInFlight) {
+    if (_shouldBlockForReconnectInFlight(reason)) {
       if (kDebugMode) {
         print('JamsService: reconnect already in flight, skipping ($reason)');
       }
@@ -232,6 +267,7 @@ class JamsService {
     final code = _currentSessionCode!;
 
     _isReconnectInFlight = true;
+    _reconnectInFlightSince = DateTime.now();
     try {
       if (kDebugMode) {
         print('JamsService: reconnect attempt for $code (reason: $reason)');
@@ -251,6 +287,7 @@ class JamsService {
       _scheduleReconnect('reconnect_failed');
     } finally {
       _isReconnectInFlight = false;
+      _reconnectInFlightSince = null;
     }
   }
 
@@ -371,10 +408,24 @@ class JamsService {
     final previousChannel = _channel;
     if (previousChannel != null) {
       try {
-        await previousChannel.untrack();
+        await previousChannel.untrack().timeout(
+          const Duration(milliseconds: 700),
+        );
+      } on TimeoutException {
+        if (kDebugMode) {
+          print('JamsService: previous channel untrack timeout, continuing');
+        }
       } catch (_) {}
       try {
-        await previousChannel.unsubscribe();
+        await previousChannel.unsubscribe().timeout(
+          const Duration(milliseconds: 700),
+        );
+      } on TimeoutException {
+        if (kDebugMode) {
+          print(
+            'JamsService: previous channel unsubscribe timeout, continuing',
+          );
+        }
       } catch (_) {}
     }
 
@@ -474,7 +525,16 @@ class JamsService {
       } else if (status == RealtimeSubscribeStatus.channelError ||
           status == RealtimeSubscribeStatus.closed ||
           status == RealtimeSubscribeStatus.timedOut) {
-        _scheduleReconnect(status.name);
+        if (_backgroundService.isInBackground) {
+          if (kDebugMode) {
+            print(
+              'JamsService: channel ${status.name} while backgrounded (${_isHost ? "host" : "participant"}), fast-path reconnect',
+            );
+          }
+          unawaited(_attemptReconnect('status_${status.name}_fastpath'));
+        } else {
+          _scheduleReconnect(status.name);
+        }
       }
     });
   }
@@ -577,15 +637,43 @@ class JamsService {
     }
 
     try {
+      if (reason == 'app_backgrounded' &&
+          !_isLeavingSession &&
+          !_isReconnectInFlight) {
+        final now = DateTime.now();
+        final canFastReconnect =
+            _lastBackgroundEntryReconnectAt == null ||
+            now.difference(_lastBackgroundEntryReconnectAt!) >
+                (_isHost
+                    ? _hostBackgroundEntryReconnectCooldown
+                    : _backgroundEntryReconnectCooldown);
+        if (canFastReconnect) {
+          _lastBackgroundEntryReconnectAt = now;
+          if (kDebugMode) {
+            print(
+              'JamsService: keepAlive app_backgrounded fast-path reconnect (${_isHost ? "host" : "participant"})',
+            );
+          }
+          await _attemptReconnect('app_backgrounded_fastpath');
+        }
+      }
+
       final silenceDuration = DateTime.now().difference(_lastInboundRealtimeAt);
-      if (!_isHost &&
+      final hasRemoteParticipants = _participants.keys.any(
+        (id) => id != oderId,
+      );
+      final shouldApplyStaleReconnect =
+          !_isLeavingSession &&
           silenceDuration > _maxInboundSilenceBeforeReconnect &&
-          !_isLeavingSession) {
+          (!_isHost || hasRemoteParticipants);
+      if (shouldApplyStaleReconnect) {
         final now = DateTime.now();
         final canForceReconnect =
             _lastKeepAliveReconnectAt == null ||
             now.difference(_lastKeepAliveReconnectAt!) >
-                _keepAliveReconnectCooldown;
+                (_connectionState.status == JamConnectionStatus.connected
+                    ? _keepAliveReconnectCooldown
+                    : _keepAliveReconnectCooldownWhenDisconnected);
 
         if (canForceReconnect) {
           _lastKeepAliveReconnectAt = now;
@@ -597,7 +685,7 @@ class JamsService {
           unawaited(_attemptReconnect('stale_inbound_keepalive'));
         } else if (kDebugMode) {
           print(
-            'JamsService: keepAlive stale inbound but reconnect cooldown active (${silenceDuration.inSeconds}s)',
+            'JamsService: keepAlive stale inbound but reconnect cooldown active (${silenceDuration.inSeconds}s, status=${_connectionState.status.name})',
           );
         }
       }
@@ -1310,11 +1398,11 @@ class JamsService {
   }
 
   void _handleStateRequest(Map<String, dynamic> payload) {
-    _markInboundRealtime('state_request');
     if (!_isHost || _channel == null || _currentSession == null) return;
 
     final requesterId = payload['requesterId'] as String?;
     if (requesterId == null || requesterId == oderId) return;
+    _markInboundRealtime('state_request');
 
     if (kDebugMode) {
       print('JamsService: State snapshot requested by $requesterId');
