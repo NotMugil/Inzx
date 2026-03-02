@@ -59,6 +59,17 @@ class InzxAudioHandler extends BaseAudioHandler with SeekHandler {
       _currentPosition = position;
       // Update just the position in playback state
       _updatePosition();
+
+      final state = _playerService.state;
+      unawaited(
+        WidgetSyncService.syncProgress(
+          track: state.currentTrack,
+          isPlaying: state.isPlaying,
+          hasTrack: state.currentTrack != null,
+          position: position,
+          duration: state.duration,
+        ),
+      );
     });
 
     // Buffered position stream

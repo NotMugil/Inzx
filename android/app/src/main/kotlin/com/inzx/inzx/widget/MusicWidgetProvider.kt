@@ -36,6 +36,8 @@ class MusicWidgetProvider : AppWidgetProvider() {
         private const val KEY_ARTIST = "artist"
         private const val KEY_IS_PLAYING = "is_playing"
         private const val KEY_HAS_TRACK = "has_track"
+        private const val KEY_POSITION_MS = "position_ms"
+        private const val KEY_DURATION_MS = "duration_ms"
 
         const val ACTION_WIDGET_REFRESH = "com.nirmal.inzx.widget.REFRESH"
         const val ACTION_PREVIOUS = "com.nirmal.inzx.widget.PREVIOUS"
@@ -44,13 +46,33 @@ class MusicWidgetProvider : AppWidgetProvider() {
 
         fun saveState(context: Context, args: Map<*, *>) {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            prefs.edit()
-                .putString(KEY_TRACK_ID, args["trackId"] as? String)
-                .putString(KEY_TITLE, args["title"] as? String ?: "Not playing")
-                .putString(KEY_ARTIST, args["artist"] as? String ?: "Open Inzx to start music")
-                .putBoolean(KEY_IS_PLAYING, args["isPlaying"] as? Boolean ?: false)
-                .putBoolean(KEY_HAS_TRACK, args["hasTrack"] as? Boolean ?: false)
-                .apply()
+            val editor = prefs.edit()
+
+            if (args.containsKey("trackId")) {
+                editor.putString(KEY_TRACK_ID, args["trackId"] as? String)
+            }
+            if (args.containsKey("title")) {
+                editor.putString(KEY_TITLE, args["title"] as? String ?: "Not playing")
+            }
+            if (args.containsKey("artist")) {
+                editor.putString(KEY_ARTIST, args["artist"] as? String ?: "Open Inzx to start music")
+            }
+            if (args.containsKey("isPlaying")) {
+                editor.putBoolean(KEY_IS_PLAYING, args["isPlaying"] as? Boolean ?: false)
+            }
+            if (args.containsKey("hasTrack")) {
+                editor.putBoolean(KEY_HAS_TRACK, args["hasTrack"] as? Boolean ?: false)
+            }
+            if (args.containsKey("positionMs")) {
+                val positionMs = (args["positionMs"] as? Number)?.toLong() ?: 0L
+                editor.putLong(KEY_POSITION_MS, positionMs)
+            }
+            if (args.containsKey("durationMs")) {
+                val durationMs = (args["durationMs"] as? Number)?.toLong() ?: 0L
+                editor.putLong(KEY_DURATION_MS, durationMs)
+            }
+
+            editor.apply()
         }
 
         fun updateAllWidgets(context: Context) {
@@ -72,6 +94,14 @@ class MusicWidgetProvider : AppWidgetProvider() {
             val artist = prefs.getString(KEY_ARTIST, "Open Inzx to start music") ?: "Open Inzx to start music"
             val isPlaying = prefs.getBoolean(KEY_IS_PLAYING, false)
             val hasTrack = prefs.getBoolean(KEY_HAS_TRACK, false)
+            val positionMs = prefs.getLong(KEY_POSITION_MS, 0L)
+            val durationMs = prefs.getLong(KEY_DURATION_MS, 0L)
+            val hasProgress = hasTrack && durationMs > 0L
+            val progress = if (hasProgress) {
+                ((positionMs.coerceIn(0L, durationMs) * 1000L) / durationMs).toInt()
+            } else {
+                0
+            }
 
             val views = RemoteViews(context.packageName, R.layout.music_widget).apply {
                 setTextViewText(R.id.widget_track_title, title)
@@ -106,6 +136,12 @@ class MusicWidgetProvider : AppWidgetProvider() {
                 setBoolean(R.id.widget_btn_previous, "setEnabled", hasTrack)
                 setBoolean(R.id.widget_btn_play_pause, "setEnabled", hasTrack)
                 setBoolean(R.id.widget_btn_next, "setEnabled", hasTrack)
+
+                setProgressBar(R.id.widget_progress, 1000, progress, false)
+                setViewVisibility(
+                    R.id.widget_progress,
+                    if (hasProgress) android.view.View.VISIBLE else android.view.View.GONE
+                )
             }
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
