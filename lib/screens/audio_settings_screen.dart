@@ -19,7 +19,7 @@ class AudioSettingsScreen extends ConsumerWidget {
     // Dynamic colors - plain white background in light mode
     final backgroundColor = (hasAlbumColors && isDark)
         ? albumColors.backgroundSecondary
-        : (isDark ? MineColors.darkBackground : MineColors.background);
+        : (isDark ? InzxColors.darkBackground : InzxColors.background);
     final accentColor = hasAlbumColors
         ? albumColors.accent
         : colorScheme.primary;
@@ -64,7 +64,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -72,7 +72,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             'Higher quality uses more data',
             style: TextStyle(
               fontSize: 14,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
 
@@ -152,7 +152,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -160,7 +160,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             'Blend the end of the current track into the start of the next',
             style: TextStyle(
               fontSize: 14,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -181,7 +181,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -189,7 +189,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             'Pre-caches next tracks and plays from local cache when available',
             style: TextStyle(
               fontSize: 14,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -250,7 +250,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                   title,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : MineColors.textPrimary,
+                    color: isDark ? Colors.white : InzxColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -258,7 +258,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                   subtitle,
                   style: TextStyle(
                     fontSize: 13,
-                    color: isDark ? Colors.white54 : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : InzxColors.textSecondary,
                   ),
                 ),
               ],
@@ -337,7 +337,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                         title,
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : MineColors.textPrimary,
+                          color: isDark ? Colors.white : InzxColors.textPrimary,
                         ),
                       ),
                       if (recommended)
@@ -367,7 +367,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                   ),
                 ],
@@ -428,7 +428,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                       'Smart Stream Cache',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -439,7 +439,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                       ),
                       loading: () => Text(
@@ -448,7 +448,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                       ),
                       error: (error, stackTrace) => Text(
@@ -470,7 +470,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -484,8 +484,8 @@ class AudioSettingsScreen extends ConsumerWidget {
                 selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: wifiOnly
-                      ? MineColors.contrastTextOn(accentColor)
-                      : (isDark ? Colors.white : MineColors.textPrimary),
+                      ? InzxColors.contrastTextOn(accentColor)
+                      : (isDark ? Colors.white : InzxColors.textPrimary),
                 ),
                 onSelected: (picked) {
                   if (picked) {
@@ -499,8 +499,8 @@ class AudioSettingsScreen extends ConsumerWidget {
                 selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: !wifiOnly
-                      ? MineColors.contrastTextOn(accentColor)
-                      : (isDark ? Colors.white : MineColors.textPrimary),
+                      ? InzxColors.contrastTextOn(accentColor)
+                      : (isDark ? Colors.white : InzxColors.textPrimary),
                 ),
                 onSelected: (picked) {
                   if (picked) {
@@ -517,7 +517,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                 : 'Pre-cache can run on both Wi-Fi and mobile data',
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -526,7 +526,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -541,8 +541,8 @@ class AudioSettingsScreen extends ConsumerWidget {
                 selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: selected
-                      ? MineColors.contrastTextOn(accentColor)
-                      : (isDark ? Colors.white : MineColors.textPrimary),
+                      ? InzxColors.contrastTextOn(accentColor)
+                      : (isDark ? Colors.white : InzxColors.textPrimary),
                 ),
                 onSelected: (picked) {
                   if (picked) {
@@ -557,7 +557,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             'Higher values cache faster but use more network and battery',
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -566,7 +566,7 @@ class AudioSettingsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -581,8 +581,8 @@ class AudioSettingsScreen extends ConsumerWidget {
                 selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: selected
-                      ? MineColors.contrastTextOn(accentColor)
-                      : (isDark ? Colors.white : MineColors.textPrimary),
+                      ? InzxColors.contrastTextOn(accentColor)
+                      : (isDark ? Colors.white : InzxColors.textPrimary),
                 ),
                 onSelected: (picked) {
                   if (picked) {
@@ -635,8 +635,8 @@ class AudioSettingsScreen extends ConsumerWidget {
                 selectedColor: accentColor,
                 labelStyle: TextStyle(
                   color: selected
-                      ? MineColors.contrastTextOn(accentColor)
-                      : (isDark ? Colors.white : MineColors.textPrimary),
+                      ? InzxColors.contrastTextOn(accentColor)
+                      : (isDark ? Colors.white : InzxColors.textPrimary),
                 ),
                 onSelected: (picked) {
                   if (picked) {
@@ -653,7 +653,7 @@ class AudioSettingsScreen extends ConsumerWidget {
                 : 'Current: ${labelFor(currentDurationMs)}',
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -719,7 +719,7 @@ class AudioQualityPicker extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
           ),
@@ -814,7 +814,7 @@ class AudioQualityPicker extends ConsumerWidget {
       title: Text(
         title,
         style: TextStyle(
-          color: isDark ? Colors.white : MineColors.textPrimary,
+          color: isDark ? Colors.white : InzxColors.textPrimary,
           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         ),
       ),

@@ -71,8 +71,8 @@ class _MusicAppState extends ConsumerState<MusicApp>
       backgroundColor = albumColors.backgroundSecondary;
     } else {
       backgroundColor = isDark
-          ? MineColors.darkBackground
-          : MineColors.background;
+          ? InzxColors.darkBackground
+          : InzxColors.background;
     }
 
     // Accent color for nav items

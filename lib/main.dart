@@ -142,8 +142,8 @@ class _InzxAppState extends ConsumerState<InzxApp> {
     final lightAccent = getAccentColor(accentColorEnum, isDark: false);
     final darkAccent = getAccentColor(accentColorEnum, isDark: true);
 
-    ThemeData lightTheme = MineTheme.lightWithAccent(lightAccent);
-    ThemeData darkTheme = MineTheme.darkWithAccent(darkAccent);
+    ThemeData lightTheme = InzxTheme.lightWithAccent(lightAccent);
+    ThemeData darkTheme = InzxTheme.darkWithAccent(darkAccent);
 
     return MaterialApp(
       title: 'Inzx',
@@ -164,8 +164,8 @@ class _InzxAppState extends ConsumerState<InzxApp> {
                 : Brightness.light,
             statusBarBrightness: brightness,
             systemNavigationBarColor: brightness == Brightness.light
-                ? MineColors.background
-                : MineColors.darkBackground,
+                ? InzxColors.background
+                : InzxColors.darkBackground,
             systemNavigationBarIconBrightness: brightness == Brightness.light
                 ? Brightness.dark
                 : Brightness.light,

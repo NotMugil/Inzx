@@ -169,7 +169,7 @@ class _JamsPanelState extends ConsumerState<JamsPanel> {
             label: const Text('Sign in with Google'),
             style: ElevatedButton.styleFrom(
               backgroundColor: widget.accentColor,
-              foregroundColor: MineColors.contrastTextOn(widget.accentColor),
+              foregroundColor: InzxColors.contrastTextOn(widget.accentColor),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
           ),
@@ -234,7 +234,7 @@ class _JamsPanelState extends ConsumerState<JamsPanel> {
             label: Text(state.isLoading ? 'Starting...' : 'Start a Jam'),
             style: ElevatedButton.styleFrom(
               backgroundColor: widget.accentColor,
-              foregroundColor: MineColors.contrastTextOn(widget.accentColor),
+              foregroundColor: InzxColors.contrastTextOn(widget.accentColor),
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),

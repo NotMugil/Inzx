@@ -4,6 +4,7 @@ import 'package:just_audio/just_audio.dart';
 import '../models/models.dart';
 import 'audio_player_service.dart' as player;
 import 'playback/playback.dart';
+import 'widget_sync_service.dart';
 
 /// Audio handler for background playback and media controls
 ///
@@ -49,6 +50,8 @@ class InzxAudioHandler extends BaseAudioHandler with SeekHandler {
         _lastQueueLength = state.queue.length;
         _updateQueue(state.queue);
       }
+
+      unawaited(WidgetSyncService.syncPlaybackState(state));
     });
 
     // Separate position stream for system UI updates (more frequent)
@@ -254,8 +257,8 @@ Future<InzxAudioHandler> initAudioService() async {
   return await AudioService.init(
     builder: () => InzxAudioHandler(),
     config: const AudioServiceConfig(
-      androidNotificationChannelId: 'com.mine.mine.audio',
-      androidNotificationChannelName: 'Mine Music',
+      androidNotificationChannelId: 'com.nirmal.inzx',
+      androidNotificationChannelName: 'Inzx Music',
       androidNotificationChannelDescription: 'Music playback controls',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,

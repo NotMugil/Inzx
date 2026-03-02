@@ -1,6 +1,6 @@
-/// Mine Design System
+/// Inzx Design System
 ///
-/// A calm, minimal, premium design system for the Mine life dashboard app.
+/// A calm, minimal, premium design system for the Inzx life dashboard app.
 ///
 /// Usage:
 /// ```dart

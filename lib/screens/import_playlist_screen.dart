@@ -107,8 +107,8 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
 
     return Scaffold(
       backgroundColor: isDark
-          ? MineColors.darkBackground
-          : MineColors.background,
+          ? InzxColors.darkBackground
+          : InzxColors.background,
       appBar: AppBar(
         title: const Text('Import from YouTube Music'),
         backgroundColor: Colors.transparent,
@@ -136,14 +136,14 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Make sure you\'re logged in to YouTube Music',
             style: TextStyle(
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -173,14 +173,14 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Create some playlists in YouTube Music first',
             style: TextStyle(
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -222,13 +222,13 @@ class _ImportPlaylistScreenState extends ConsumerState<ImportPlaylistScreen> {
               playlist.title,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             subtitle: Text(
               '${playlist.trackCount ?? 0} tracks',
               style: TextStyle(
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
               ),
             ),
             trailing: isImported

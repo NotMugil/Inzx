@@ -1738,10 +1738,10 @@ class _NowPlayingScreenState extends ConsumerState<NowPlayingScreen>
             // Use album colors in dark mode, plain white in light mode
             final bgColor = isDark
                 ? albumColors.backgroundPrimary
-                : MineColors.background;
+                : InzxColors.background;
             final txtColor = isDark
                 ? albumColors.onBackground
-                : MineColors.textPrimary;
+                : InzxColors.textPrimary;
             JamsPanel.show(
               context,
               backgroundColor: bgColor,

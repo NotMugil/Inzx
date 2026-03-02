@@ -39,11 +39,11 @@ class _MusicHomeTabState extends ConsumerState<MusicHomeTab> {
     if (hasAlbumColors && _isDark) {
       return albumColors.backgroundSecondary;
     }
-    return _isDark ? MineColors.darkBackground : MineColors.background;
+    return _isDark ? InzxColors.darkBackground : InzxColors.background;
   }
 
   ({Color primary, Color secondary, Color tertiary}) get _textColors =>
-      MineColors.adaptiveTextColors(_backgroundColor);
+      InzxColors.adaptiveTextColors(_backgroundColor);
 
   /// OuterTune-style prefetching: resolve stream URLs when tracks become visible
   /// This makes play taps instant (pure cache lookup, no network call)

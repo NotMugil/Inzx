@@ -1,4 +1,4 @@
-package com.inzx.inzx
+package com.nirmal.inzx
 
 import android.content.Intent
 import android.net.Uri
@@ -7,7 +7,8 @@ import android.os.PowerManager
 import android.provider.Settings
 import android.webkit.CookieManager
 import androidx.core.content.ContextCompat
-import com.inzx.inzx.jams.JamsForegroundService
+import com.nirmal.inzx.jams.JamsForegroundService
+import com.nirmal.inzx.widget.MusicWidgetProvider
 import com.ryanheise.audioservice.AudioServiceFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,6 +16,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : AudioServiceFragmentActivity() {
     private val COOKIE_CHANNEL = "inzx/cookies"
     private val JAMS_CHANNEL = "inzx/jams_native"
+    private val WIDGET_CHANNEL = "inzx/widget"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -132,6 +134,35 @@ class MainActivity : AudioServiceFragmentActivity() {
                         result.success(false)
                     } catch (e: Exception) {
                         result.error("BATTERY_REQUEST_ERROR", e.message, null)
+                    }
+                }
+
+                else -> result.notImplemented()
+            }
+        }
+
+        // Music widget bridge
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, WIDGET_CHANNEL).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "syncPlaybackState" -> {
+                    try {
+                        val args = call.arguments as? Map<*, *>
+                        if (args != null) {
+                            MusicWidgetProvider.saveState(this, args)
+                        }
+                        MusicWidgetProvider.updateAllWidgets(this)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("WIDGET_SYNC_ERROR", e.message, null)
+                    }
+                }
+
+                "refreshWidget" -> {
+                    try {
+                        MusicWidgetProvider.updateAllWidgets(this)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("WIDGET_REFRESH_ERROR", e.message, null)
                     }
                 }
 

@@ -1,4 +1,4 @@
-package com.inzx.inzx.jams
+package com.nirmal.inzx.jams
 
 import android.app.*
 import android.content.Context
@@ -8,8 +8,8 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.inzx.inzx.MainActivity
-import com.inzx.inzx.R
+import com.nirmal.inzx.MainActivity
+import com.nirmal.inzx.R
 
 /**
  * Native Android Foreground Service for Jams
@@ -26,9 +26,9 @@ class JamsForegroundService : Service() {
         private const val CHANNEL_NAME = "Jams Session"
 
         // Actions
-        const val ACTION_START = "com.inzx.inzx.jams.START"
-        const val ACTION_STOP = "com.inzx.inzx.jams.STOP"
-        const val ACTION_UPDATE_NOTIFICATION = "com.inzx.inzx.jams.UPDATE"
+        const val ACTION_START = "com.nirmal.inzx.jams.START"
+        const val ACTION_STOP = "com.nirmal.inzx.jams.STOP"
+        const val ACTION_UPDATE_NOTIFICATION = "com.nirmal.inzx.jams.UPDATE"
 
         // Extras
         const val EXTRA_SESSION_CODE = "session_code"

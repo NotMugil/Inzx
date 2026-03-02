@@ -53,7 +53,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           Row(
@@ -69,7 +69,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                 },
                 icon: Icon(
                   Icons.search_rounded,
-                  color: isDark ? Colors.white70 : MineColors.textPrimary,
+                  color: isDark ? Colors.white70 : InzxColors.textPrimary,
                 ),
               ),
               IconButton(
@@ -78,7 +78,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                 },
                 icon: Icon(
                   Icons.add_rounded,
-                  color: isDark ? Colors.white70 : MineColors.textPrimary,
+                  color: isDark ? Colors.white70 : InzxColors.textPrimary,
                 ),
               ),
             ],
@@ -113,7 +113,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
               labelStyle: TextStyle(
                 color: isSelected
                     ? accentColor
-                    : (isDark ? Colors.white70 : MineColors.textPrimary),
+                    : (isDark ? Colors.white70 : InzxColors.textPrimary),
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 13,
               ),
@@ -197,7 +197,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ),
@@ -241,7 +241,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white54 : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : InzxColors.textSecondary,
                   ),
                 ),
               ],
@@ -278,7 +278,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ),
@@ -325,14 +325,14 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontWeight: FontWeight.w500,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           subtitle: Text(
             '${playlist.trackCount ?? 0} songs',
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           trailing: const Icon(Icons.chevron_right),
@@ -356,7 +356,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
       child: Text(
         'No YouTube Music playlists found',
         style: TextStyle(
-          color: isDark ? Colors.white38 : MineColors.textSecondary,
+          color: isDark ? Colors.white38 : InzxColors.textSecondary,
         ),
       ),
     );
@@ -392,14 +392,14 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           Text(
             '$count songs',
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -481,7 +481,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                   ),
@@ -519,7 +519,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             Text(
               '${tracks.length} songs',
               style: TextStyle(
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
               ),
             ),
             const SizedBox(height: 8),
@@ -555,7 +555,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                     subtitle: Text(
@@ -566,7 +566,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                         fontSize: 12,
                         color: isDark
                             ? Colors.white54
-                            : MineColors.textSecondary,
+                            : InzxColors.textSecondary,
                       ),
                     ),
                     onTap: () {
@@ -615,7 +615,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             const SizedBox(height: 8),
@@ -623,7 +623,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
               'Create a playlist to organize your music',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
               ),
             ),
             const SizedBox(height: 16),
@@ -669,7 +669,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white54 : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : InzxColors.textSecondary,
                   ),
                 ),
               ],
@@ -684,7 +684,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                       style: TextStyle(
                         color: isDark
                             ? Colors.white38
-                            : MineColors.textSecondary,
+                            : InzxColors.textSecondary,
                       ),
                     ),
                   )
@@ -741,7 +741,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
               ),
             ),
           ),
@@ -841,7 +841,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           Text(
@@ -850,7 +850,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -886,14 +886,14 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Play some music to see albums here',
             style: TextStyle(
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -934,7 +934,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white54 : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : InzxColors.textSecondary,
                   ),
                 ),
               ],
@@ -949,7 +949,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                       style: TextStyle(
                         color: isDark
                             ? Colors.white38
-                            : MineColors.textSecondary,
+                            : InzxColors.textSecondary,
                       ),
                     ),
                   )
@@ -997,7 +997,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
               ),
             ),
           ),
@@ -1040,7 +1040,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
               name,
               style: TextStyle(
                 fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
           ),
@@ -1060,7 +1060,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
               '$songCount ${songCount == 1 ? 'song' : 'songs'}',
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
               ),
             )
           : null,
@@ -1098,14 +1098,14 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Play some music to see artists here',
             style: TextStyle(
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -1171,7 +1171,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                         fontSize: 12,
                         color: isDark
                             ? Colors.white54
-                            : MineColors.textSecondary,
+                            : InzxColors.textSecondary,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1198,7 +1198,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white54 : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : InzxColors.textSecondary,
                   ),
                 ),
               ),
@@ -1220,7 +1220,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white54 : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : InzxColors.textSecondary,
                   ),
                 ),
               ),
@@ -1245,7 +1245,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
                         fontWeight: FontWeight.w600,
                         color: isDark
                             ? Colors.white54
-                            : MineColors.textSecondary,
+                            : InzxColors.textSecondary,
                       ),
                     ),
                     TextButton.icon(
@@ -1284,7 +1284,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             Text(
               'Error loading downloads',
               style: TextStyle(
-                color: isDark ? Colors.white70 : MineColors.textSecondary,
+                color: isDark ? Colors.white70 : InzxColors.textSecondary,
               ),
             ),
           ],
@@ -1337,13 +1337,13 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
         snapshot.title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: isDark ? Colors.white : MineColors.textPrimary),
+        style: TextStyle(color: isDark ? Colors.white : InzxColors.textPrimary),
       ),
       subtitle: Text(
         '${snapshot.downloadedTracks}/${snapshot.totalTracks} downloaded',
         style: TextStyle(
           fontSize: 12,
-          color: isDark ? Colors.white54 : MineColors.textSecondary,
+          color: isDark ? Colors.white54 : InzxColors.textSecondary,
         ),
       ),
       trailing: Icon(
@@ -1390,7 +1390,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
         task.track.title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: isDark ? Colors.white : MineColors.textPrimary),
+        style: TextStyle(color: isDark ? Colors.white : InzxColors.textPrimary),
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1401,7 +1401,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           const SizedBox(height: 4),
@@ -1483,7 +1483,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
         track.title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: isDark ? Colors.white : MineColors.textPrimary),
+        style: TextStyle(color: isDark ? Colors.white : InzxColors.textPrimary),
       ),
       subtitle: Text(
         track.artist,
@@ -1491,7 +1491,7 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 12,
-          color: isDark ? Colors.white54 : MineColors.textSecondary,
+          color: isDark ? Colors.white54 : InzxColors.textSecondary,
         ),
       ),
       trailing: Row(
@@ -1563,13 +1563,13 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
         title: Text(
           'Delete download?',
           style: TextStyle(
-            color: isDark ? Colors.white : MineColors.textPrimary,
+            color: isDark ? Colors.white : InzxColors.textPrimary,
           ),
         ),
         content: Text(
           'This will remove "${track.title}" from your device. You can download it again later.',
           style: TextStyle(
-            color: isDark ? Colors.white70 : MineColors.textSecondary,
+            color: isDark ? Colors.white70 : InzxColors.textSecondary,
           ),
         ),
         actions: [
@@ -1617,14 +1617,14 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white70 : MineColors.textSecondary,
+              color: isDark ? Colors.white70 : InzxColors.textSecondary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Downloaded songs will appear here',
             style: TextStyle(
-              color: isDark ? Colors.white38 : MineColors.textSecondary,
+              color: isDark ? Colors.white38 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -1656,19 +1656,19 @@ class _MusicLibraryTabState extends ConsumerState<MusicLibraryTab> {
         title: Text(
           'Create playlist',
           style: TextStyle(
-            color: isDark ? Colors.white : MineColors.textPrimary,
+            color: isDark ? Colors.white : InzxColors.textPrimary,
           ),
         ),
         content: TextField(
           controller: controller,
           autofocus: true,
           style: TextStyle(
-            color: isDark ? Colors.white : MineColors.textPrimary,
+            color: isDark ? Colors.white : InzxColors.textPrimary,
           ),
           decoration: InputDecoration(
             hintText: 'Playlist name',
             hintStyle: TextStyle(
-              color: isDark ? Colors.white38 : MineColors.textSecondary,
+              color: isDark ? Colors.white38 : InzxColors.textSecondary,
             ),
           ),
         ),

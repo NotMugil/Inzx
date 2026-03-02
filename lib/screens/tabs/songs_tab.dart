@@ -200,7 +200,7 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
                     Icon(
                       Icons.search_rounded,
                       size: 20,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -215,11 +215,11 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
                           hintStyle: TextStyle(
                             color: isDark
                                 ? Colors.white54
-                                : MineColors.textSecondary,
+                                : InzxColors.textSecondary,
                           ),
                         ),
                         style: TextStyle(
-                          color: isDark ? Colors.white : MineColors.textPrimary,
+                          color: isDark ? Colors.white : InzxColors.textPrimary,
                           fontSize: 15,
                         ),
                         onChanged: (value) =>
@@ -236,7 +236,7 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
           Row(
@@ -253,7 +253,7 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
                 },
                 icon: Icon(
                   _isSearching ? Icons.close_rounded : Icons.search_rounded,
-                  color: isDark ? Colors.white70 : MineColors.textPrimary,
+                  color: isDark ? Colors.white70 : InzxColors.textPrimary,
                 ),
               ),
             ],
@@ -289,7 +289,7 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
               labelStyle: TextStyle(
                 color: isSelected
                     ? accentColor
-                    : (isDark ? Colors.white70 : MineColors.textPrimary),
+                    : (isDark ? Colors.white70 : InzxColors.textPrimary),
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 13,
               ),
@@ -324,7 +324,7 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
                 '$count songs',
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
             ],
@@ -356,20 +356,20 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
                 Icon(
                   Icons.sort_rounded,
                   size: 18,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   _sortBy,
                   style: TextStyle(
                     fontSize: 13,
-                    color: isDark ? Colors.white70 : MineColors.textPrimary,
+                    color: isDark ? Colors.white70 : InzxColors.textPrimary,
                   ),
                 ),
                 Icon(
                   Icons.arrow_drop_down_rounded,
                   size: 20,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ],
             ),
@@ -439,14 +439,14 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             subMessage,
             style: TextStyle(
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -506,7 +506,7 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
               label: const Text('Play all'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentColor,
-                foregroundColor: MineColors.contrastTextOn(accentColor),
+                foregroundColor: InzxColors.contrastTextOn(accentColor),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
@@ -598,7 +598,7 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
           fontSize: 15,
           color: isCurrentTrack
               ? accentColor
-              : (isDark ? Colors.white : MineColors.textPrimary),
+              : (isDark ? Colors.white : InzxColors.textPrimary),
         ),
       ),
       subtitle: Text(
@@ -607,14 +607,14 @@ class _MusicSongsTabState extends ConsumerState<MusicSongsTab> {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 13,
-          color: isDark ? Colors.white54 : MineColors.textSecondary,
+          color: isDark ? Colors.white54 : InzxColors.textSecondary,
         ),
       ),
       trailing: IconButton(
         onPressed: () => TrackOptionsSheet.show(context, track),
         icon: Icon(
           Icons.more_vert_rounded,
-          color: isDark ? Colors.white54 : MineColors.textSecondary,
+          color: isDark ? Colors.white54 : InzxColors.textSecondary,
         ),
       ),
       onTap: () async {
