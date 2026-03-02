@@ -50,6 +50,7 @@ class MusicWidgetProvider : AppWidgetProvider() {
         private const val KEY_DURATION_MS = "duration_ms"
         private const val KEY_ARTWORK_PATH = "artwork_path"
         private const val KEY_ACCENT_COLOR = "accent_color"
+        private const val DEFAULT_WIDGET_BG = "#E6121212"
 
         const val ACTION_WIDGET_REFRESH = "com.nirmal.inzx.widget.REFRESH"
         const val ACTION_PREVIOUS = "com.nirmal.inzx.widget.PREVIOUS"
@@ -140,12 +141,18 @@ class MusicWidgetProvider : AppWidgetProvider() {
             }
             val iconColor = if (hasTrack) accentColor else Color.parseColor("#DDFFFFFF")
             val titleColor = if (hasTrack) blendColors(accentColor, Color.WHITE, 0.35f) else Color.WHITE
+            val widgetBackgroundColor = if (hasTrack) {
+                withAlpha(blendColors(accentColor, Color.BLACK, 0.78f), 220)
+            } else {
+                Color.parseColor(DEFAULT_WIDGET_BG)
+            }
 
             val views = RemoteViews(context.packageName, R.layout.music_widget).apply {
                 setTextViewText(R.id.widget_track_title, title)
                 setTextViewText(R.id.widget_track_artist, artist)
                 setTextColor(R.id.widget_track_title, titleColor)
                 setTextColor(R.id.widget_track_artist, withAlpha(Color.WHITE, 204))
+                setInt(R.id.widget_bg_tint, "setBackgroundColor", widgetBackgroundColor)
 
                 val launchIntent = Intent(context, MainActivity::class.java)
                 val launchPendingIntent = PendingIntent.getActivity(

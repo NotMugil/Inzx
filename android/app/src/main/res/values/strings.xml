@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="music_widget_description">Inzx playback controls</string>
+    <string name="music_widget_description">Inzx Minimal</string>
     <string name="music_widget_artwork">Current track artwork</string>
     <string name="music_widget_previous">Previous</string>
     <string name="music_widget_play_pause">Play or pause</string>
