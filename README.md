@@ -1,5 +1,5 @@
 <div align="center">
-	<img src="assets/icon/logo.png" alt="Inzx Logo" width="200"/>
+   <img src="assets/icon/logo.png" alt="Inzx Logo" width="200"/>
 <h1>Inzx</h1>
 
 *A modern YouTube Music client with dynamic theming and real-time Jam sessions*
@@ -42,6 +42,7 @@
 - **Smooth Animations** - Fluid transitions and micro-interactions
 - **Album Art Visualization** - Stunning now-playing screen with palette-based theming
 - **Lyrics Preview** - Focused lyrics display with real time with song
+- **Widget Support** - Dynamic widget support with progress indicator and controls
 
 ### 👥 Collaborative Listening (Jams)
 - **Real-time Sync** - Listen together with friends in real-time
@@ -103,6 +104,14 @@
 <img src="./.github/screenshots/preview-lyrics.png" alt="Lyrics" width="180" height="360" style="object-fit: cover; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
 <br/><b>Lyrics</b>
 </td>
+</tr>
+<tr>
+<td align="center" width="50%">
+<img src="./.github/screenshots/widget-4x1-preview.png" alt="Widget 4x1" width="380" height="180" style="object-fit: cover; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
+<br/><b>Widget 4x1</b>
+<td align="center" width="50%">
+<img src="./.github/screenshots/widget-4x2-preview.png" alt="Widget 4x2" width="360" height="180" style="object-fit: cover; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
+<br/><b>Widget 4x2</b>
 </tr>
 </table>
 </div>
@@ -343,8 +352,7 @@ Audio is streamed from YouTube and cached simultaneously, so tracks you've playe
 ### 🐛 Known Issues
 
 - [x] ~~No Background sync for jams~~
-- [ ] No Widget support (yet)
-
+- [x] ~~No Widget support (yet)~~
 
 ### 📝 Roadmap
 
