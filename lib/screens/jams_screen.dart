@@ -136,7 +136,7 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
               label: const Text('Sign in with Google'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentColor,
-                foregroundColor: MineColors.contrastTextOn(accentColor),
+                foregroundColor: InzxColors.contrastTextOn(accentColor),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 32,
                   vertical: 16,
@@ -306,8 +306,8 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
                       disabledBackgroundColor: accentColor.withValues(
                         alpha: 0.3,
                       ),
-                      foregroundColor: MineColors.contrastTextOn(accentColor),
-                      disabledForegroundColor: MineColors.contrastTextOn(
+                      foregroundColor: InzxColors.contrastTextOn(accentColor),
+                      disabledForegroundColor: InzxColors.contrastTextOn(
                         accentColor,
                       ).withValues(alpha: 0.5),
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -321,7 +321,7 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: MineColors.contrastTextOn(accentColor),
+                              color: InzxColors.contrastTextOn(accentColor),
                             ),
                           )
                         : const Text('Join'),
@@ -975,9 +975,7 @@ class _JamsScreenState extends ConsumerState<JamsScreen> {
     if (!mounted) return;
     if (!success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not join session. Check the code.'),
-        ),
+        const SnackBar(content: Text('No jam found for this code.')),
       );
     }
   }

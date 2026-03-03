@@ -1,7 +1,7 @@
 name: inzx
 description: "Inzx - A beautiful offline-first music player with intelligent caching"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.2.0
 
 environment:
   sdk: ^3.10.3
@@ -106,7 +106,7 @@ flutter_launcher_icons:
 # Flutter Native Splash configuration
 flutter_native_splash:
   color: "#000000"  # Black background for splash screen
-  image: "assets/splash/logo.png"  # Your logo for the splash screen
+  image: "assets/splash/logo_splash.png"  # Splash-specific image with extra padding
   android: true
   ios: false
   # Optional: different logo for dark mode
@@ -115,7 +115,7 @@ flutter_native_splash:
   
   # Android specific
   android_12:
-    image: "assets/splash/logo.png"
+    image: "assets/splash/logo_splash.png"
     color: "#000000"
     # icon_background_color: "#000000"
   

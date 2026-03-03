@@ -102,8 +102,8 @@ class BrowseMoodsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: isDark
-          ? MineColors.darkBackground
-          : MineColors.background,
+          ? InzxColors.darkBackground
+          : InzxColors.background,
       appBar: AppBar(
         title: const Text('Moods & Genres'),
         backgroundColor: Colors.transparent,
@@ -143,7 +143,7 @@ class BrowseMoodsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
         ),
@@ -311,8 +311,8 @@ class MoodPlaylistsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: isDark
-          ? MineColors.darkBackground
-          : MineColors.background,
+          ? InzxColors.darkBackground
+          : InzxColors.background,
       appBar: AppBar(
         title: Text(mood.title),
         backgroundColor: Colors.transparent,
@@ -323,7 +323,7 @@ class MoodPlaylistsScreen extends ConsumerWidget {
               child: Text(
                 'No playlists found',
                 style: TextStyle(
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
             )
@@ -390,7 +390,7 @@ class MoodPlaylistsScreen extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : MineColors.textPrimary,
+                  color: isDark ? Colors.white : InzxColors.textPrimary,
                 ),
               ),
             ),

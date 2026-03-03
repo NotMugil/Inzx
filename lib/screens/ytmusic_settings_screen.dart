@@ -58,7 +58,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
     if (_hasAlbumColors && _isDark) {
       return _albumColors.backgroundSecondary;
     }
-    return _isDark ? MineColors.darkBackground : MineColors.background;
+    return _isDark ? InzxColors.darkBackground : InzxColors.background;
   }
 
   /// Accent color (dynamic or theme default)
@@ -69,11 +69,11 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
       ? Colors.white.withValues(alpha: 0.05)
       : Colors.white.withValues(alpha: 0.85);
   Color get _textPrimary =>
-      _isDark ? MineColors.darkTextPrimary : MineColors.textPrimary;
+      _isDark ? InzxColors.darkTextPrimary : InzxColors.textPrimary;
   Color get _textSecondary =>
-      _isDark ? MineColors.darkTextSecondary : MineColors.textSecondary;
+      _isDark ? InzxColors.darkTextSecondary : InzxColors.textSecondary;
   Color get _textTertiary =>
-      _isDark ? MineColors.darkTextTertiary : MineColors.textTertiary;
+      _isDark ? InzxColors.darkTextTertiary : InzxColors.textTertiary;
 
   /// Deep-link searchable items from nested screens (Audio, Downloads, Backup)
   List<_SearchableItem> get _deepSearchItems => [
@@ -225,8 +225,8 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: _isDark
-              ? MineColors.darkBorder
-              : MineColors.border.withValues(alpha: 0.4),
+              ? InzxColors.darkBorder
+              : InzxColors.border.withValues(alpha: 0.4),
         ),
       ),
       child: TextField(
@@ -349,7 +349,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
               if (index < items.length - 1)
                 Divider(
                   height: 1,
-                  color: _isDark ? MineColors.darkDivider : MineColors.divider,
+                  color: _isDark ? InzxColors.darkDivider : InzxColors.divider,
                 ),
             ],
           );
@@ -465,10 +465,10 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: _isDark
-              ? MineColors.darkBorder
+              ? InzxColors.darkBorder
               : (_hasAlbumColors
                     ? _accentColor.withValues(alpha: 0.15)
-                    : MineColors.border.withValues(alpha: 0.3)),
+                    : InzxColors.border.withValues(alpha: 0.3)),
         ),
       ),
       child: Column(
@@ -592,22 +592,22 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
         ),
         const SizedBox(height: 10),
         Row(
-          children: MineThemeMode.values.map((mode) {
+          children: InzxThemeMode.values.map((mode) {
             final selected = mode == currentThemeMode;
-            final label = mode == MineThemeMode.system
+            final label = mode == InzxThemeMode.system
                 ? 'Auto'
-                : mode == MineThemeMode.light
+                : mode == InzxThemeMode.light
                 ? 'Light'
                 : 'Dark';
-            final icon = mode == MineThemeMode.system
+            final icon = mode == InzxThemeMode.system
                 ? Iconsax.autobrightness
-                : mode == MineThemeMode.light
+                : mode == InzxThemeMode.light
                 ? Iconsax.sun_1
                 : Iconsax.moon;
             return Expanded(
               child: Padding(
                 padding: EdgeInsets.only(
-                  right: mode != MineThemeMode.dark ? 8 : 0,
+                  right: mode != InzxThemeMode.dark ? 8 : 0,
                 ),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -620,8 +620,8 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
                       color: selected
                           ? _accentColor.withValues(alpha: 0.4)
                           : (_isDark
-                                ? MineColors.darkBorder
-                                : MineColors.border),
+                                ? InzxColors.darkBorder
+                                : InzxColors.border),
                     ),
                   ),
                   child: InkWell(
@@ -707,7 +707,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
         ),
         Divider(
           height: 1,
-          color: _isDark ? MineColors.darkDivider : MineColors.divider,
+          color: _isDark ? InzxColors.darkDivider : InzxColors.divider,
         ),
         _settingsTile(
           icon: Iconsax.document_download,
@@ -721,7 +721,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
         ),
         Divider(
           height: 1,
-          color: _isDark ? MineColors.darkDivider : MineColors.divider,
+          color: _isDark ? InzxColors.darkDivider : InzxColors.divider,
         ),
         _settingsTile(
           icon: Iconsax.document_upload,
@@ -1000,7 +1000,7 @@ class _YTMusicSettingsScreenState extends ConsumerState<YTMusicSettingsScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: _textPrimary,
               side: BorderSide(
-                color: _isDark ? MineColors.darkBorder : MineColors.border,
+                color: _isDark ? InzxColors.darkBorder : InzxColors.border,
               ),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Mine app typography system
+/// Inzx app typography system
 /// Clean, readable, with generous line heights for a calm reading experience
-class MineTypography {
-  MineTypography._();
+class InzxTypography {
+  InzxTypography._();
 
   // ─────────────────────────────────────────────────────────────────
   // FONT FAMILY
@@ -178,20 +178,20 @@ class MineTypography {
 /// Creates the TextTheme for the app
 TextTheme createMineTextTheme() {
   return const TextTheme(
-    displayLarge: MineTypography.displayLarge,
-    displayMedium: MineTypography.displayMedium,
-    displaySmall: MineTypography.displaySmall,
-    headlineLarge: MineTypography.headlineLarge,
-    headlineMedium: MineTypography.headlineMedium,
-    headlineSmall: MineTypography.headlineSmall,
-    titleLarge: MineTypography.titleLarge,
-    titleMedium: MineTypography.titleMedium,
-    titleSmall: MineTypography.titleSmall,
-    bodyLarge: MineTypography.bodyLarge,
-    bodyMedium: MineTypography.bodyMedium,
-    bodySmall: MineTypography.bodySmall,
-    labelLarge: MineTypography.labelLarge,
-    labelMedium: MineTypography.labelMedium,
-    labelSmall: MineTypography.labelSmall,
+    displayLarge: InzxTypography.displayLarge,
+    displayMedium: InzxTypography.displayMedium,
+    displaySmall: InzxTypography.displaySmall,
+    headlineLarge: InzxTypography.headlineLarge,
+    headlineMedium: InzxTypography.headlineMedium,
+    headlineSmall: InzxTypography.headlineSmall,
+    titleLarge: InzxTypography.titleLarge,
+    titleMedium: InzxTypography.titleMedium,
+    titleSmall: InzxTypography.titleSmall,
+    bodyLarge: InzxTypography.bodyLarge,
+    bodyMedium: InzxTypography.bodyMedium,
+    bodySmall: InzxTypography.bodySmall,
+    labelLarge: InzxTypography.labelLarge,
+    labelMedium: InzxTypography.labelMedium,
+    labelSmall: InzxTypography.labelSmall,
   );
 }

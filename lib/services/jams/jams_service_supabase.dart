@@ -17,6 +17,7 @@ class JamsService {
   bool _isHost = false;
   bool _canControlPlayback = false; // Permission granted by host
   JamSession? _currentSession;
+  bool _isJoinValidationPending = false;
 
   // Stream controllers
   final _sessionController = StreamController<JamSession?>.broadcast();
@@ -113,6 +114,12 @@ class JamsService {
   Stream<bool> get permissionChangeStream => _permissionChangeController.stream;
   int get stateVersion => _lastAppliedStateVersion;
   JamConnectionState get connectionState => _connectionState;
+
+  void _emitSessionUpdate() {
+    // Prevent UI from entering session screen before join-code validation passes.
+    if (_isJoinValidationPending && !_isHost) return;
+    _sessionController.add(_currentSession);
+  }
 
   int _nextStateVersion() {
     _stateVersion += 1;
@@ -318,6 +325,7 @@ class JamsService {
   Future<String?> createSession() async {
     try {
       _isLeavingSession = false;
+      _isJoinValidationPending = false;
       _resetReconnectState();
       _emitConnectionState(
         JamConnectionState.reconnecting(
@@ -351,7 +359,7 @@ class JamsService {
         createdAt: DateTime.now(),
       );
 
-      _sessionController.add(_currentSession);
+      _emitSessionUpdate();
       _backgroundService.attachService(this);
       await _backgroundService.onSessionJoined(
         sessionCode: code,
@@ -378,6 +386,7 @@ class JamsService {
   Future<bool> joinSession(String code) async {
     try {
       _isLeavingSession = false;
+      _isJoinValidationPending = true;
       _resetReconnectState();
       _emitConnectionState(
         JamConnectionState.reconnecting(
@@ -388,8 +397,26 @@ class JamsService {
       );
       _currentSessionCode = code.toUpperCase();
       _isHost = false;
+      _canControlPlayback = false;
+      _participants.clear();
+      _currentSession = null;
 
       await _joinChannel(_currentSessionCode!);
+
+      // A valid join must see an existing host presence in the room.
+      final hasHost = await _waitForHostPresence();
+      if (!hasHost) {
+        _isJoinValidationPending = false;
+        await leaveSession();
+        _emitConnectionState(
+          JamConnectionState.disconnected(reason: 'session_not_found'),
+        );
+        _errorController.add('No jam found for this code.');
+        return false;
+      }
+
+      _isJoinValidationPending = false;
+      _emitSessionUpdate();
       _backgroundService.attachService(this);
       await _backgroundService.onSessionJoined(
         sessionCode: _currentSessionCode!,
@@ -405,6 +432,7 @@ class JamsService {
       }
       return true;
     } catch (e) {
+      _isJoinValidationPending = false;
       if (kDebugMode) {
         print('JamsService: Join session error: $e');
       }
@@ -414,9 +442,24 @@ class JamsService {
     }
   }
 
+  Future<bool> _waitForHostPresence({
+    Duration timeout = const Duration(seconds: 3),
+  }) async {
+    final deadline = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(deadline)) {
+      final hasHost = _participants.values.any(
+        (p) => p.isHost && p.id != oderId,
+      );
+      if (hasHost) return true;
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+    return _participants.values.any((p) => p.isHost && p.id != oderId);
+  }
+
   /// Join a Supabase Realtime channel for the session
   Future<void> _joinChannel(String code) async {
     final supabase = Supabase.instance.client;
+    final subscribedCompleter = Completer<void>();
 
     // Clean up previous channel before creating a new one (reconnect path).
     final previousChannel = _channel;
@@ -513,32 +556,48 @@ class JamsService {
         print('JamsService: Channel status: $status (error: $error)');
       }
       if (status == RealtimeSubscribeStatus.subscribed) {
-        _resetReconnectState();
-        _markInboundRealtime('subscribed');
-        _emitConnectionState(JamConnectionState.connected());
+        try {
+          _resetReconnectState();
+          _markInboundRealtime('subscribed');
+          _emitConnectionState(JamConnectionState.connected());
 
-        // Track our presence
-        await _channel!.track({
-          'user_id': oderId,
-          'user_name': userName,
-          'photo_url': userPhotoUrl,
-          'is_host': _isHost,
-          'joined_at': DateTime.now().toIso8601String(),
-        });
+          // Track our presence
+          await _channel!.track({
+            'user_id': oderId,
+            'user_name': userName,
+            'photo_url': userPhotoUrl,
+            'is_host': _isHost,
+            'joined_at': DateTime.now().toIso8601String(),
+          });
 
-        // Wait a moment for presence to sync across all clients
-        await Future.delayed(const Duration(milliseconds: 500));
+          // Wait a moment for presence to sync across all clients
+          await Future.delayed(const Duration(milliseconds: 500));
 
-        // Force a presence sync to get current state
-        _handlePresenceSync();
+          // Force a presence sync to get current state
+          _handlePresenceSync();
 
-        // Ask host for latest authoritative state after subscribe/reconnect
-        if (!_isHost) {
-          unawaited(requestStateSync(reason: 'initial_subscribe'));
+          // Ask host for latest authoritative state after subscribe/reconnect
+          if (!_isHost) {
+            unawaited(requestStateSync(reason: 'initial_subscribe'));
+          }
+
+          if (!subscribedCompleter.isCompleted) {
+            subscribedCompleter.complete();
+          }
+        } catch (e) {
+          if (!subscribedCompleter.isCompleted) {
+            subscribedCompleter.completeError(e);
+          }
         }
       } else if (status == RealtimeSubscribeStatus.channelError ||
           status == RealtimeSubscribeStatus.closed ||
           status == RealtimeSubscribeStatus.timedOut) {
+        if (!subscribedCompleter.isCompleted) {
+          final details = error?.toString() ?? status.name;
+          subscribedCompleter.completeError(
+            Exception('Channel subscribe failed: $details'),
+          );
+        }
         if (_backgroundService.isInBackground) {
           if (kDebugMode) {
             print(
@@ -551,11 +610,19 @@ class JamsService {
         }
       }
     });
+
+    await subscribedCompleter.future.timeout(
+      const Duration(seconds: 8),
+      onTimeout: () {
+        throw TimeoutException('Timed out while joining jam channel');
+      },
+    );
   }
 
   /// Leave the current session
   Future<void> leaveSession() async {
     _isLeavingSession = true;
+    _isJoinValidationPending = false;
     _cancelReconnectTimer();
     _emitConnectionState(
       JamConnectionState.disconnected(reason: 'left_session'),
@@ -867,7 +934,7 @@ class JamsService {
       _currentSession = _currentSession!.copyWith(
         playbackState: newPlaybackState,
       );
-      _sessionController.add(_currentSession);
+      _emitSessionUpdate();
     }
   }
 
@@ -960,7 +1027,7 @@ class JamsService {
 
     // Update local session
     _currentSession = _currentSession!.copyWith(queue: items);
-    _sessionController.add(_currentSession);
+    _emitSessionUpdate();
     if (kDebugMode) {
       print('JamsService: Initialized jam queue with ${items.length} tracks');
     }
@@ -986,7 +1053,7 @@ class JamsService {
 
     // Update local session
     _currentSession = _currentSession!.copyWith(queue: newQueue);
-    _sessionController.add(_currentSession);
+    _emitSessionUpdate();
     if (kDebugMode) {
       print('JamsService: Appended ${items.length} tracks to jam queue');
     }
@@ -1120,7 +1187,7 @@ class JamsService {
 
       // Update local state first for instant feedback
       _currentSession = _currentSession!.copyWith(queue: newQueue);
-      _sessionController.add(_currentSession);
+      _emitSessionUpdate();
       final stateVersion = _nextStateVersion();
 
       await _channel!.sendBroadcastMessage(
@@ -1155,7 +1222,7 @@ class JamsService {
 
     // Update local session
     _currentSession = _currentSession!.copyWith(queue: newQueue);
-    _sessionController.add(_currentSession);
+    _emitSessionUpdate();
     if (kDebugMode) {
       print('JamsService: Removed songs from user $userId');
     }
@@ -1185,7 +1252,7 @@ class JamsService {
 
     // Update local session
     _currentSession = _currentSession!.copyWith(queue: newQueue);
-    _sessionController.add(_currentSession);
+    _emitSessionUpdate();
 
     return trackToPlay;
   }
@@ -1210,7 +1277,7 @@ class JamsService {
 
     // Update local session
     _currentSession = _currentSession!.copyWith(queue: newQueue);
-    _sessionController.add(_currentSession);
+    _emitSessionUpdate();
 
     return nextItem;
   }
@@ -1264,7 +1331,7 @@ class JamsService {
       // Update session
       if (_currentSession != null) {
         _currentSession = _currentSession!.copyWith(playbackState: playback);
-        _sessionController.add(_currentSession);
+        _emitSessionUpdate();
       }
 
       _playbackController.add(playback);
@@ -1312,7 +1379,7 @@ class JamsService {
 
       if (_currentSession != null) {
         _currentSession = _currentSession!.copyWith(queue: queue);
-        _sessionController.add(_currentSession);
+        _emitSessionUpdate();
       }
       if (kDebugMode) {
         print('JamsService: Queue updated - ${queue.length} tracks');
@@ -1435,6 +1502,7 @@ class JamsService {
     }
 
     _isLeavingSession = true;
+    _isJoinValidationPending = false;
     _cancelReconnectTimer();
     _emitConnectionState(JamConnectionState.disconnected(reason: reason));
     _currentSessionCode = null;
@@ -1510,7 +1578,7 @@ class JamsService {
       _canControlPlayback = me?.canControlPlayback ?? false;
 
       _markAppliedStateVersion(incomingVersion);
-      _sessionController.add(snapshot);
+      _emitSessionUpdate();
       _playbackController.add(snapshot.playbackState);
 
       if (wasHost != _isHost) {
@@ -1770,7 +1838,7 @@ class JamsService {
       createdAt: _currentSession?.createdAt ?? DateTime.now(),
     );
 
-    _sessionController.add(_currentSession);
+    _emitSessionUpdate();
 
     if (_backgroundService.isServiceRunning) {
       unawaited(

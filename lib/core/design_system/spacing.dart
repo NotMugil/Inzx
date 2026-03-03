@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Mine app spacing system
+/// Inzx app spacing system
 /// Generous spacing for a calm, breathable UI
-class MineSpacing {
-  MineSpacing._();
+class InzxSpacing {
+  InzxSpacing._();
 
   // ─────────────────────────────────────────────────────────────────
   // BASE SPACING SCALE (4px base unit)
@@ -136,7 +136,7 @@ class MineSpacing {
 }
 
 /// Extension for easy spacing access
-extension MineSpacingExtension on num {
+extension InzxSpacingExtension on num {
   /// Horizontal space
   SizedBox get w => SizedBox(width: toDouble());
 

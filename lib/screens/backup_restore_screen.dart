@@ -55,7 +55,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
     // Dynamic colors - plain white background in light mode
     final backgroundColor = (hasAlbumColors && isDark)
         ? albumColors.backgroundSecondary
-        : (isDark ? MineColors.darkBackground : MineColors.background);
+        : (isDark ? InzxColors.darkBackground : InzxColors.background);
     final accentColor = hasAlbumColors
         ? albumColors.accent
         : colorScheme.primary;
@@ -85,7 +85,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                   child: Text(
                     'Backup includes liked songs, playlists, search history, recently played, and key app settings.',
                     style: TextStyle(
-                      color: isDark ? Colors.white70 : MineColors.textSecondary,
+                      color: isDark ? Colors.white70 : InzxColors.textSecondary,
                     ),
                   ),
                 ),
@@ -101,7 +101,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -123,7 +123,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -218,7 +218,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                       fontWeight: FontWeight.w600,
                       color:
                           color ??
-                          (isDark ? Colors.white : MineColors.textPrimary),
+                          (isDark ? Colors.white : InzxColors.textPrimary),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -226,7 +226,7 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                   ),
                 ],
@@ -252,12 +252,12 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       // Save to temp file
       final tempDir = await getTemporaryDirectory();
       final timestamp = DateTime.now().toIso8601String().split('T')[0];
-      final file = File('${tempDir.path}/mine_backup_$timestamp.json');
+      final file = File('${tempDir.path}/inzx_backup_$timestamp.json');
       await file.writeAsString(json);
 
       // Share
       await SharePlus.instance.share(
-        ShareParams(files: [XFile(file.path)], subject: 'Mine Music Backup'),
+        ShareParams(files: [XFile(file.path)], subject: 'Inzx Music Backup'),
       );
 
       if (mounted) {
@@ -478,10 +478,10 @@ class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
       final themeIndex = settings[ThemeModeNotifier.themeModePrefKey];
       if (themeIndex is int &&
           themeIndex >= 0 &&
-          themeIndex < MineThemeMode.values.length) {
+          themeIndex < InzxThemeMode.values.length) {
         ref
             .read(themeModeProvider.notifier)
-            .setThemeMode(MineThemeMode.values[themeIndex]);
+            .setThemeMode(InzxThemeMode.values[themeIndex]);
       }
     }
 

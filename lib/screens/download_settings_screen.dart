@@ -20,7 +20,7 @@ class DownloadSettingsScreen extends ConsumerWidget {
     // Dynamic colors - plain white background in light mode
     final backgroundColor = (hasAlbumColors && isDark)
         ? albumColors.backgroundSecondary
-        : (isDark ? MineColors.darkBackground : MineColors.background);
+        : (isDark ? InzxColors.darkBackground : InzxColors.background);
     final accentColor = hasAlbumColors
         ? albumColors.accent
         : colorScheme.primary;
@@ -41,7 +41,7 @@ class DownloadSettingsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -49,7 +49,7 @@ class DownloadSettingsScreen extends ConsumerWidget {
             'Quality for offline downloads',
             style: TextStyle(
               fontSize: 14,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -65,7 +65,7 @@ class DownloadSettingsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
@@ -73,7 +73,7 @@ class DownloadSettingsScreen extends ConsumerWidget {
             'Where downloaded music files are stored',
             style: TextStyle(
               fontSize: 14,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           const SizedBox(height: 16),
@@ -103,7 +103,7 @@ class DownloadSettingsScreen extends ConsumerWidget {
                     'Downloaded tracks play without internet and don\'t use streaming data.',
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white70 : MineColors.textSecondary,
+                      color: isDark ? Colors.white70 : InzxColors.textSecondary,
                     ),
                   ),
                 ),
@@ -135,14 +135,14 @@ class DownloadSettingsScreen extends ConsumerWidget {
               Icon(
                 Iconsax.info_circle,
                 size: 18,
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
               ),
               const SizedBox(width: 8),
               Text(
                 'Estimated Storage per Song',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : MineColors.textPrimary,
+                  color: isDark ? Colors.white : InzxColors.textPrimary,
                 ),
               ),
             ],
@@ -166,13 +166,13 @@ class DownloadSettingsScreen extends ConsumerWidget {
           Text(
             label,
             style: TextStyle(
-              color: isDark ? Colors.white70 : MineColors.textSecondary,
+              color: isDark ? Colors.white70 : InzxColors.textSecondary,
             ),
           ),
           Text(
             value,
             style: TextStyle(
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -221,7 +221,7 @@ class _DownloadQualitySetting extends ConsumerWidget {
                       'Download Quality',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -231,7 +231,7 @@ class _DownloadQualitySetting extends ConsumerWidget {
                         fontSize: 12,
                         color: isDark
                             ? Colors.white54
-                            : MineColors.textSecondary,
+                            : InzxColors.textSecondary,
                       ),
                     ),
                   ],
@@ -320,7 +320,7 @@ class _DownloadQualitySetting extends ConsumerWidget {
             style: TextStyle(
               fontSize: 10,
               color: isSelected
-                  ? MineColors.contrastTextOn(
+                  ? InzxColors.contrastTextOn(
                       accentColor,
                     ).withValues(alpha: 0.8)
                   : (isDark ? Colors.white54 : Colors.grey),
@@ -329,13 +329,13 @@ class _DownloadQualitySetting extends ConsumerWidget {
         ],
       ),
       selectedColor: accentColor,
-      checkmarkColor: MineColors.contrastTextOn(accentColor),
+      checkmarkColor: InzxColors.contrastTextOn(accentColor),
       backgroundColor: isDark
           ? Colors.white.withValues(alpha: 0.1)
           : Colors.grey.shade200,
       labelStyle: TextStyle(
         color: isSelected
-            ? MineColors.contrastTextOn(accentColor)
+            ? InzxColors.contrastTextOn(accentColor)
             : (isDark ? Colors.white : Colors.black87),
       ),
       onSelected: (selected) {
@@ -387,7 +387,7 @@ class _DownloadPathSetting extends ConsumerWidget {
                       'Storage Location',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -398,7 +398,7 @@ class _DownloadPathSetting extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -409,7 +409,7 @@ class _DownloadPathSetting extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                       ),
                       error: (error, stackTrace) => Text(
@@ -430,7 +430,7 @@ class _DownloadPathSetting extends ConsumerWidget {
             'Downloads are stored in app-private storage for better reliability and no permission requirements.',
             style: TextStyle(
               fontSize: 11,
-              color: isDark ? Colors.white38 : MineColors.textSecondary,
+              color: isDark ? Colors.white38 : InzxColors.textSecondary,
               fontStyle: FontStyle.italic,
             ),
           ),

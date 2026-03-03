@@ -115,7 +115,7 @@ class QuickPicksShelf extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                       ),
                     Text(
@@ -123,7 +123,7 @@ class QuickPicksShelf extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                   ],
@@ -305,7 +305,7 @@ class OptimizedTrackItem extends ConsumerWidget {
                       fontWeight: FontWeight.w500,
                       color: isCurrentTrack
                           ? (accentColor ?? colorScheme.primary)
-                          : (isDark ? Colors.white : MineColors.textPrimary),
+                          : (isDark ? Colors.white : InzxColors.textPrimary),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -315,7 +315,7 @@ class OptimizedTrackItem extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                   ),
                 ],
@@ -327,7 +327,7 @@ class OptimizedTrackItem extends ConsumerWidget {
               icon: Icon(
                 Icons.more_vert,
                 size: 18,
-                color: isDark ? Colors.white38 : MineColors.textSecondary,
+                color: isDark ? Colors.white38 : InzxColors.textSecondary,
               ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 32),
@@ -343,7 +343,7 @@ class OptimizedTrackItem extends ConsumerWidget {
       color: isDark ? Colors.white12 : Colors.grey.shade200,
       child: Icon(
         Iconsax.music,
-        color: isDark ? Colors.white38 : MineColors.textSecondary,
+        color: isDark ? Colors.white38 : InzxColors.textSecondary,
         size: 24,
       ),
     );
@@ -383,7 +383,7 @@ class MixesShelf extends ConsumerWidget {
                   shelf.strapline!,
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? Colors.white54 : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : InzxColors.textSecondary,
                   ),
                 ),
               Text(
@@ -391,7 +391,7 @@ class MixesShelf extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : MineColors.textPrimary,
+                  color: isDark ? Colors.white : InzxColors.textPrimary,
                 ),
               ),
             ],
@@ -455,7 +455,7 @@ class MixesShelf extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             if (item.subtitle != null)
@@ -465,7 +465,7 @@ class MixesShelf extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
           ],
@@ -547,7 +547,7 @@ class ContentCarouselShelf extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                       ),
                     Text(
@@ -555,7 +555,7 @@ class ContentCarouselShelf extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                   ],
@@ -642,7 +642,7 @@ class ContentCarouselShelf extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             if (item.subtitle != null && !isArtist)
@@ -652,7 +652,7 @@ class ContentCarouselShelf extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
           ],
@@ -666,7 +666,7 @@ class ContentCarouselShelf extends ConsumerWidget {
       color: isDark ? Colors.white12 : Colors.grey.shade200,
       child: Icon(
         isArtist ? Iconsax.profile_2user : Iconsax.music_square,
-        color: isDark ? Colors.white38 : MineColors.textSecondary,
+        color: isDark ? Colors.white38 : InzxColors.textSecondary,
         size: 40,
       ),
     );
@@ -703,7 +703,7 @@ class MoodGenreShelf extends StatelessWidget {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
         ),
@@ -788,7 +788,7 @@ class ChartsShelf extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : MineColors.textPrimary,
+                  color: isDark ? Colors.white : InzxColors.textPrimary,
                 ),
               ),
               if (shelf.browseId != null)
@@ -856,7 +856,7 @@ class ChartsShelf extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             if (item.subtitle != null)
@@ -866,7 +866,7 @@ class ChartsShelf extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
           ],
@@ -880,7 +880,7 @@ class ChartsShelf extends ConsumerWidget {
       color: isDark ? Colors.white12 : Colors.grey.shade200,
       child: Icon(
         Iconsax.chart,
-        color: isDark ? Colors.white38 : MineColors.textSecondary,
+        color: isDark ? Colors.white38 : InzxColors.textSecondary,
         size: 40,
       ),
     );
@@ -929,7 +929,7 @@ class VideoShelf extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                       ),
                     Text(
@@ -937,7 +937,7 @@ class VideoShelf extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                   ],
@@ -1059,7 +1059,7 @@ class VideoShelf extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             if (item.subtitle != null)
@@ -1069,7 +1069,7 @@ class VideoShelf extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
           ],
@@ -1083,7 +1083,7 @@ class VideoShelf extends ConsumerWidget {
       color: isDark ? Colors.white12 : Colors.grey.shade200,
       child: Icon(
         Iconsax.video_play,
-        color: isDark ? Colors.white38 : MineColors.textSecondary,
+        color: isDark ? Colors.white38 : InzxColors.textSecondary,
         size: 48,
       ),
     );
@@ -1134,7 +1134,7 @@ class CommunityShelf extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                       ),
                     Text(
@@ -1142,7 +1142,7 @@ class CommunityShelf extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                   ],
@@ -1217,7 +1217,7 @@ class CommunityShelf extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             if (item.subtitle != null)
@@ -1227,7 +1227,7 @@ class CommunityShelf extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
           ],
@@ -1241,7 +1241,7 @@ class CommunityShelf extends ConsumerWidget {
       color: isDark ? Colors.white12 : Colors.grey.shade200,
       child: Icon(
         Iconsax.music_playlist,
-        color: isDark ? Colors.white38 : MineColors.textSecondary,
+        color: isDark ? Colors.white38 : InzxColors.textSecondary,
         size: 40,
       ),
     );
@@ -1290,7 +1290,7 @@ class DailyDiscoverShelf extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                       ),
                     Text(
@@ -1298,7 +1298,7 @@ class DailyDiscoverShelf extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                   ],
@@ -1385,7 +1385,7 @@ class DailyDiscoverShelf extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             if (item.subtitle != null)
@@ -1395,7 +1395,7 @@ class DailyDiscoverShelf extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
           ],
@@ -1409,7 +1409,7 @@ class DailyDiscoverShelf extends ConsumerWidget {
       color: isDark ? Colors.white12 : Colors.grey.shade200,
       child: Icon(
         Iconsax.music_play,
-        color: isDark ? Colors.white38 : MineColors.textSecondary,
+        color: isDark ? Colors.white38 : InzxColors.textSecondary,
         size: 48,
       ),
     );
@@ -1465,7 +1465,7 @@ class TrackListShelf extends ConsumerWidget {
                           fontSize: 12,
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                         ),
                       ),
                     Text(
@@ -1473,7 +1473,7 @@ class TrackListShelf extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                       ),
                     ),
                   ],

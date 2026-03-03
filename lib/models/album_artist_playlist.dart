@@ -81,6 +81,7 @@ class Album extends Equatable {
       'description': description,
       'year': year,
       'trackCount': trackCount,
+      'tracks': tracks?.map((t) => t.toJson()).toList(),
       'totalDuration': totalDuration?.inMilliseconds,
       'isYTMusic': isYTMusic,
     };
@@ -98,6 +99,9 @@ class Album extends Equatable {
       description: json['description'] as String?,
       year: json['year'] as String?,
       trackCount: json['trackCount'] as int?,
+      tracks: (json['tracks'] as List<dynamic>?)
+          ?.map((t) => Track.fromJson(t as Map<String, dynamic>))
+          .toList(),
       totalDuration: json['totalDuration'] != null
           ? Duration(milliseconds: json['totalDuration'] as int)
           : null,

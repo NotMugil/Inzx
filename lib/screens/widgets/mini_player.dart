@@ -123,7 +123,7 @@ class MusicMiniPlayer extends ConsumerWidget {
               Colors.white.withValues(alpha: 0.12),
               Colors.white.withValues(alpha: 0.05),
             ];
-            backgroundForText = MineColors.darkBackground;
+            backgroundForText = InzxColors.darkBackground;
             borderColor = Colors.white.withValues(alpha: 0.15);
           }
         } else {
@@ -135,11 +135,11 @@ class MusicMiniPlayer extends ConsumerWidget {
           borderColor = hasAlbumColors
               ? accentColor.withValues(alpha: 0.15)
               : Colors.white.withValues(alpha: 0.8);
-          backgroundForText = MineColors.background;
+          backgroundForText = InzxColors.background;
         }
 
         // Adaptive text colors based on background luminance
-        final textColors = MineColors.adaptiveTextColors(backgroundForText);
+        final textColors = InzxColors.adaptiveTextColors(backgroundForText);
         final foregroundColor = textColors.primary;
         final secondaryColor = textColors.secondary;
 

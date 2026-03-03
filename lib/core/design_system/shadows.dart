@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'colors.dart';
 
-/// Mine app shadow system
+/// Inzx app shadow system
 /// Soft, subtle shadows for a calm premium feel
-class MineShadows {
-  MineShadows._();
+class InzxShadows {
+  InzxShadows._();
 
   // ─────────────────────────────────────────────────────────────────
   // ELEVATION LEVELS
@@ -15,7 +15,7 @@ class MineShadows {
 
   /// Subtle shadow - for hover states
   static const List<BoxShadow> xs = [
-    BoxShadow(color: MineColors.shadow, blurRadius: 2, offset: Offset(0, 1)),
+    BoxShadow(color: InzxColors.shadow, blurRadius: 2, offset: Offset(0, 1)),
   ];
 
   /// Small shadow - for cards at rest

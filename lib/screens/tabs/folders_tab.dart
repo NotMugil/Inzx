@@ -44,7 +44,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           Row(
@@ -55,7 +55,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                 },
                 icon: Icon(
                   Icons.document_scanner_rounded,
-                  color: isDark ? Colors.white70 : MineColors.textPrimary,
+                  color: isDark ? Colors.white70 : InzxColors.textPrimary,
                 ),
               ),
               IconButton(
@@ -64,7 +64,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                 },
                 icon: Icon(
                   Icons.settings_rounded,
-                  color: isDark ? Colors.white70 : MineColors.textPrimary,
+                  color: isDark ? Colors.white70 : InzxColors.textPrimary,
                 ),
               ),
             ],
@@ -95,7 +95,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             const SizedBox(height: 16),
@@ -103,7 +103,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
               Text(
                 'No folders added yet',
                 style: TextStyle(
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               )
             else
@@ -113,14 +113,14 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                   title: Text(
                     folder.split('/').last,
                     style: TextStyle(
-                      color: isDark ? Colors.white : MineColors.textPrimary,
+                      color: isDark ? Colors.white : InzxColors.textPrimary,
                     ),
                   ),
                   subtitle: Text(
                     folder,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                   ),
                   trailing: IconButton(
@@ -217,7 +217,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             const SizedBox(height: 12),
@@ -226,7 +226,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 height: 1.4,
               ),
             ),
@@ -265,7 +265,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                 children: [
                   Icon(
                     Icons.info_outline_rounded,
-                    color: isDark ? Colors.white38 : MineColors.textSecondary,
+                    color: isDark ? Colors.white38 : InzxColors.textSecondary,
                     size: 20,
                   ),
                   const SizedBox(width: 12),
@@ -276,7 +276,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                         fontSize: 13,
                         color: isDark
                             ? Colors.white54
-                            : MineColors.textSecondary,
+                            : InzxColors.textSecondary,
                       ),
                     ),
                   ),
@@ -309,7 +309,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
               Text(
                 '${tracks.length} songs from ${folders.length} folder(s)',
                 style: TextStyle(
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
               TextButton.icon(
@@ -415,7 +415,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
               child: Text(
                 'Permission Required',
                 style: TextStyle(
-                  color: isDark ? Colors.white : MineColors.textPrimary,
+                  color: isDark ? Colors.white : InzxColors.textPrimary,
                 ),
               ),
             ),
@@ -424,7 +424,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
         content: Text(
           'Storage permission is required to access your music files. Please enable it in Settings.',
           style: TextStyle(
-            color: isDark ? Colors.white70 : MineColors.textSecondary,
+            color: isDark ? Colors.white70 : InzxColors.textSecondary,
           ),
         ),
         actions: [
@@ -467,13 +467,13 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
         title: Text(
           'Folder Added',
           style: TextStyle(
-            color: isDark ? Colors.white : MineColors.textPrimary,
+            color: isDark ? Colors.white : InzxColors.textPrimary,
           ),
         ),
         content: Text(
           'Added "$folderName". Would you like to scan it for music now?',
           style: TextStyle(
-            color: isDark ? Colors.white70 : MineColors.textSecondary,
+            color: isDark ? Colors.white70 : InzxColors.textSecondary,
           ),
         ),
         actions: [
@@ -528,13 +528,13 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
           children: [
             Icon(
               Icons.document_scanner_rounded,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
             const SizedBox(width: 12),
             Text(
               'Scan for music',
               style: TextStyle(
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
           ],
@@ -548,7 +548,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                   ? 'Add a folder first, then scan for audio files.'
                   : 'This will scan ${folders.length} folder(s) for audio files.',
               style: TextStyle(
-                color: isDark ? Colors.white70 : MineColors.textSecondary,
+                color: isDark ? Colors.white70 : InzxColors.textSecondary,
               ),
             ),
             if (folders.isNotEmpty) ...[
@@ -558,7 +558,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white54 : MineColors.textSecondary,
+                  color: isDark ? Colors.white54 : InzxColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 4),
@@ -571,7 +571,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                         fontSize: 12,
                         color: isDark
                             ? Colors.white54
-                            : MineColors.textSecondary,
+                            : InzxColors.textSecondary,
                       ),
                     ),
                   ),
@@ -580,7 +580,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                   '... and ${folders.length - 3} more',
                   style: TextStyle(
                     fontSize: 12,
-                    color: isDark ? Colors.white38 : MineColors.textSecondary,
+                    color: isDark ? Colors.white38 : InzxColors.textSecondary,
                   ),
                 ),
             ],
@@ -666,7 +666,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                   'Scanning for music...',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : MineColors.textPrimary,
+                    color: isDark ? Colors.white : InzxColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -675,7 +675,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                     '${progress.scannedFiles} / ${progress.totalFiles} files',
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -685,7 +685,7 @@ class _MusicFoldersTabState extends ConsumerState<MusicFoldersTab> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? Colors.white38 : MineColors.textSecondary,
+                      color: isDark ? Colors.white38 : InzxColors.textSecondary,
                     ),
                   ),
                 ],

@@ -492,6 +492,8 @@ class AlbumScreen extends ConsumerWidget {
                       delegate: SliverChildBuilderDelegate((context, index) {
                         final track = tracks[index];
                         final isTrackPlaying = currentTrack?.id == track.id;
+                        final artworkUrl =
+                            track.bestThumbnail ?? album.bestThumbnail;
 
                         return ListTile(
                           contentPadding: const EdgeInsets.symmetric(
@@ -502,15 +504,77 @@ class AlbumScreen extends ConsumerWidget {
                           selectedTileColor:
                               (isDark ? Colors.white : colorScheme.onSurface)
                                   .withValues(alpha: 0.1),
-                          leading: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              color: isDark
-                                  ? Colors.white54
-                                  : colorScheme.onSurface.withValues(
-                                      alpha: 0.54,
+                          leading: SizedBox(
+                            width: 84,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 32,
+                                  child: Text(
+                                    '${index + 1}',
+                                    textAlign: TextAlign.right,
+                                    maxLines: 1,
+                                    softWrap: false,
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? Colors.white54
+                                          : colorScheme.onSurface.withValues(
+                                              alpha: 0.54,
+                                            ),
+                                      fontSize: 14,
                                     ),
-                              fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: SizedBox(
+                                    width: 40,
+                                    height: 40,
+                                    child: artworkUrl != null
+                                        ? CachedNetworkImage(
+                                            imageUrl: artworkUrl,
+                                            fit: BoxFit.cover,
+                                            memCacheWidth: 80,
+                                            memCacheHeight: 80,
+                                            placeholder: (_, _) => Container(
+                                              color: isDark
+                                                  ? Colors.grey[900]
+                                                  : Colors.grey[200],
+                                            ),
+                                            errorWidget: (_, _, _) => Container(
+                                              color: isDark
+                                                  ? Colors.grey[900]
+                                                  : Colors.grey[200],
+                                              child: Icon(
+                                                Icons.music_note_rounded,
+                                                size: 18,
+                                                color: isDark
+                                                    ? Colors.white54
+                                                    : colorScheme.onSurface
+                                                          .withValues(
+                                                            alpha: 0.6,
+                                                          ),
+                                              ),
+                                            ),
+                                          )
+                                        : Container(
+                                            color: isDark
+                                                ? Colors.grey[900]
+                                                : Colors.grey[200],
+                                            child: Icon(
+                                              Icons.music_note_rounded,
+                                              size: 18,
+                                              color: isDark
+                                                  ? Colors.white54
+                                                  : colorScheme.onSurface
+                                                        .withValues(alpha: 0.6),
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           title: Text(

@@ -199,9 +199,14 @@ class JamsNotifier extends StateNotifier<JamsUIState> {
           );
         }
         _syncController?.startSync();
+        state = state.copyWith(isLoading: false, error: null);
+        return true;
       }
-      state = state.copyWith(isLoading: false);
-      return success;
+      state = state.copyWith(
+        isLoading: false,
+        error: 'No jam found for this code.',
+      );
+      return false;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
       return false;

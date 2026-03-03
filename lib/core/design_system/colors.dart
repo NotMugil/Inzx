@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-/// Mine app color palette
+/// Inzx app color palette
 /// Calm, minimal, premium aesthetic with soft whites and muted accents
-class MineColors {
-  MineColors._();
+class InzxColors {
+  InzxColors._();
 
   // ─────────────────────────────────────────────────────────────────
   // BASE COLORS
@@ -243,6 +243,6 @@ class MineColors {
 }
 
 /// Extension to easily access colors from BuildContext
-extension MineColorsExtension on BuildContext {
-  MineColors get colors => MineColors._();
+extension InzxColorsExtension on BuildContext {
+  InzxColors get colors => InzxColors._();
 }

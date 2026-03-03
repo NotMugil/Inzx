@@ -146,8 +146,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
     return Scaffold(
       backgroundColor: isDark
-          ? MineColors.darkBackground
-          : MineColors.background,
+          ? InzxColors.darkBackground
+          : InzxColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -173,7 +173,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             onPressed: () => Navigator.of(context).pop(),
             icon: Icon(
               Icons.arrow_back_rounded,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           Expanded(
@@ -191,7 +191,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   Icon(
                     Icons.search_rounded,
                     size: 20,
-                    color: isDark ? Colors.white54 : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : InzxColors.textSecondary,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -202,7 +202,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       onSubmitted: _performSearch,
                       cursorColor: isDark ? Colors.white : colorScheme.primary,
                       style: TextStyle(
-                        color: isDark ? Colors.white : MineColors.textPrimary,
+                        color: isDark ? Colors.white : InzxColors.textPrimary,
                         fontSize: 15,
                       ),
                       decoration: InputDecoration(
@@ -210,7 +210,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         hintStyle: TextStyle(
                           color: isDark
                               ? Colors.white54
-                              : MineColors.textSecondary,
+                              : InzxColors.textSecondary,
                           fontSize: 15,
                         ),
                         border: InputBorder.none,
@@ -229,7 +229,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         size: 20,
                         color: isDark
                             ? Colors.white54
-                            : MineColors.textSecondary,
+                            : InzxColors.textSecondary,
                       ),
                     ),
                 ],
@@ -277,7 +277,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               labelStyle: TextStyle(
                 color: isSelected
                     ? colorScheme.primary
-                    : (isDark ? Colors.white70 : MineColors.textPrimary),
+                    : (isDark ? Colors.white70 : InzxColors.textPrimary),
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 13,
               ),
@@ -312,12 +312,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             return ListTile(
               leading: Icon(
                 Icons.search_rounded,
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
               ),
               title: Text(
                 suggestions[index],
                 style: TextStyle(
-                  color: isDark ? Colors.white : MineColors.textPrimary,
+                  color: isDark ? Colors.white : InzxColors.textPrimary,
                 ),
               ),
               trailing: IconButton(
@@ -331,7 +331,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 icon: Icon(
                   Icons.north_west_rounded,
                   size: 18,
-                  color: isDark ? Colors.white38 : MineColors.textSecondary,
+                  color: isDark ? Colors.white38 : InzxColors.textSecondary,
                 ),
               ),
               onTap: () => _performSearch(suggestions[index]),
@@ -444,7 +444,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             message,
             style: TextStyle(
               fontSize: 16,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -475,7 +475,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : MineColors.textPrimary,
+                  color: isDark ? Colors.white : InzxColors.textPrimary,
                 ),
               ),
             ],
@@ -514,7 +514,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 12),
@@ -557,7 +557,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : MineColors.textPrimary,
+                      color: isDark ? Colors.white : InzxColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -565,7 +565,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     'Artist${artist.formattedSubscribers != null ? ' • ${artist.formattedSubscribers}' : ''}',
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                   ),
                 ],
@@ -608,7 +608,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : MineColors.textPrimary,
+                      color: isDark ? Colors.white : InzxColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -616,7 +616,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     'Album • ${album.artist}',
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                   ),
                 ],
@@ -653,7 +653,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : MineColors.textPrimary,
+                      color: isDark ? Colors.white : InzxColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -661,7 +661,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     'Playlist • ${playlist.author ?? 'YouTube Music'}',
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                   ),
                 ],
@@ -708,7 +708,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
           ),
@@ -753,7 +753,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           fontWeight: isCurrentTrack ? FontWeight.w600 : FontWeight.w500,
           color: isCurrentTrack
               ? colorScheme.primary
-              : (isDark ? Colors.white : MineColors.textPrimary),
+              : (isDark ? Colors.white : InzxColors.textPrimary),
         ),
       ),
       subtitle: Text(
@@ -762,14 +762,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 12,
-          color: isDark ? Colors.white54 : MineColors.textSecondary,
+          color: isDark ? Colors.white54 : InzxColors.textSecondary,
         ),
       ),
       trailing: IconButton(
         onPressed: () => TrackOptionsSheet.show(context, track),
         icon: Icon(
           Icons.more_vert_rounded,
-          color: isDark ? Colors.white54 : MineColors.textSecondary,
+          color: isDark ? Colors.white54 : InzxColors.textSecondary,
         ),
       ),
       onTap: () async {
@@ -801,7 +801,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
           ),
@@ -837,14 +837,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: isDark ? Colors.white : MineColors.textPrimary,
+          color: isDark ? Colors.white : InzxColors.textPrimary,
         ),
       ),
       subtitle: Text(
         'Artist${artist.formattedSubscribers != null ? ' • ${artist.formattedSubscribers}' : ''}',
         style: TextStyle(
           fontSize: 12,
-          color: isDark ? Colors.white54 : MineColors.textSecondary,
+          color: isDark ? Colors.white54 : InzxColors.textSecondary,
         ),
       ),
       onTap: () => ArtistScreen.open(
@@ -886,7 +886,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
           ],
@@ -916,7 +916,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
           ),
@@ -952,7 +952,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: isDark ? Colors.white : MineColors.textPrimary,
+          color: isDark ? Colors.white : InzxColors.textPrimary,
         ),
       ),
       subtitle: Text(
@@ -961,7 +961,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 12,
-          color: isDark ? Colors.white54 : MineColors.textSecondary,
+          color: isDark ? Colors.white54 : InzxColors.textSecondary,
         ),
       ),
       onTap: () => AlbumScreen.open(
@@ -999,7 +999,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
             Text(
@@ -1008,7 +1008,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? Colors.white54 : MineColors.textSecondary,
+                color: isDark ? Colors.white54 : InzxColors.textSecondary,
               ),
             ),
           ],
@@ -1038,7 +1038,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : MineColors.textPrimary,
+                color: isDark ? Colors.white : InzxColors.textPrimary,
               ),
             ),
           ),
@@ -1070,7 +1070,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: isDark ? Colors.white : MineColors.textPrimary,
+          color: isDark ? Colors.white : InzxColors.textPrimary,
         ),
       ),
       subtitle: Text(
@@ -1079,7 +1079,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 12,
-          color: isDark ? Colors.white54 : MineColors.textSecondary,
+          color: isDark ? Colors.white54 : InzxColors.textSecondary,
         ),
       ),
       onTap: () => PlaylistScreen.open(

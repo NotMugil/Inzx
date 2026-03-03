@@ -19,8 +19,8 @@ class DownloadsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: isDark
-          ? MineColors.darkBackground
-          : MineColors.background,
+          ? InzxColors.darkBackground
+          : InzxColors.background,
       appBar: AppBar(
         title: const Text('Downloads'),
         backgroundColor: Colors.transparent,
@@ -93,14 +93,14 @@ class DownloadsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Download songs to listen offline',
             style: TextStyle(
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
         ],
@@ -197,14 +197,14 @@ class DownloadsScreen extends ConsumerWidget {
                   '${state.totalCompleted} songs downloaded',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: isDark ? Colors.white : MineColors.textPrimary,
+                    color: isDark ? Colors.white : InzxColors.textPrimary,
                   ),
                 ),
                 Text(
                   'Using ${state.totalStorageText}',
                   style: TextStyle(
                     fontSize: 13,
-                    color: isDark ? Colors.white54 : MineColors.textSecondary,
+                    color: isDark ? Colors.white54 : InzxColors.textSecondary,
                   ),
                 ),
               ],
@@ -233,7 +233,7 @@ class DownloadsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : MineColors.textPrimary,
+              color: isDark ? Colors.white : InzxColors.textPrimary,
             ),
           ),
         ),
@@ -313,7 +313,7 @@ class DownloadsScreen extends ConsumerWidget {
         track.title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: isDark ? Colors.white : MineColors.textPrimary),
+        style: TextStyle(color: isDark ? Colors.white : InzxColors.textPrimary),
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,7 +324,7 @@ class DownloadsScreen extends ConsumerWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 13,
-              color: isDark ? Colors.white54 : MineColors.textSecondary,
+              color: isDark ? Colors.white54 : InzxColors.textSecondary,
             ),
           ),
           if (task.status == DownloadStatus.downloading)
@@ -343,7 +343,7 @@ class DownloadsScreen extends ConsumerWidget {
                     task.progressText,
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? Colors.white54 : MineColors.textSecondary,
+                      color: isDark ? Colors.white54 : InzxColors.textSecondary,
                     ),
                   ),
                 ],
@@ -401,7 +401,7 @@ class DownloadsScreen extends ConsumerWidget {
               task.sizeText,
               style: TextStyle(
                 fontSize: 12,
-                color: isDark ? Colors.white38 : MineColors.textSecondary,
+                color: isDark ? Colors.white38 : InzxColors.textSecondary,
               ),
             ),
             IconButton(

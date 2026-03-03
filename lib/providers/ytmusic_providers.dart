@@ -588,10 +588,23 @@ final ytMusicAlbumProvider = FutureProvider.family<Album?, String>((
     final cached = HiveService.albumsBox.get(albumId);
     if (cached != null && !cached.isExpired) {
       CacheAnalytics.instance.recordCacheHit();
-      if (kDebugMode) {
-        print('ytMusicAlbumProvider: Loaded $albumId from cache');
+      final cachedAlbum = await compute(_parseAlbumIsolate, cached.albumJson);
+      final hasTrackList =
+          cachedAlbum.tracks != null && cachedAlbum.tracks!.isNotEmpty;
+      final isKnownEmptyAlbum = cachedAlbum.trackCount == 0;
+
+      if (hasTrackList || isKnownEmptyAlbum) {
+        if (kDebugMode) {
+          print('ytMusicAlbumProvider: Loaded $albumId from cache');
+        }
+        return cachedAlbum;
       }
-      return await compute(_parseAlbumIsolate, cached.albumJson);
+
+      if (kDebugMode) {
+        print(
+          'ytMusicAlbumProvider: Cache missing track list for $albumId, refetching from network',
+        );
+      }
     }
   } catch (e) {
     if (kDebugMode) {

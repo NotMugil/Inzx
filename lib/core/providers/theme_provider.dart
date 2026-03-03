@@ -4,10 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../design_system/colors.dart';
 
 /// Theme mode options for the app
-enum MineThemeMode { system, light, dark }
+enum InzxThemeMode { system, light, dark }
 
 /// Available accent color options
-enum MineAccentColor {
+enum InzxAccentColor {
   red, // AMOLED red - default
   sage, // Sage green
   lavender, // Soft lavender
@@ -20,80 +20,80 @@ enum MineAccentColor {
 }
 
 /// Get the Color value for an accent color option
-Color getAccentColor(MineAccentColor accent, {bool isDark = false}) {
+Color getAccentColor(InzxAccentColor accent, {bool isDark = false}) {
   switch (accent) {
-    case MineAccentColor.red:
+    case InzxAccentColor.red:
       return isDark ? const Color(0xFFE53935) : const Color(0xFFD32F2F);
-    case MineAccentColor.sage:
-      return isDark ? const Color(0xFF8FD4B6) : MineColors.accent;
-    case MineAccentColor.lavender:
-      return isDark ? const Color(0xFFB8B4DE) : MineColors.accentSecondary;
-    case MineAccentColor.peach:
-      return isDark ? const Color(0xFFF8C4B0) : MineColors.accentTertiary;
-    case MineAccentColor.ocean:
+    case InzxAccentColor.sage:
+      return isDark ? const Color(0xFF8FD4B6) : InzxColors.accent;
+    case InzxAccentColor.lavender:
+      return isDark ? const Color(0xFFB8B4DE) : InzxColors.accentSecondary;
+    case InzxAccentColor.peach:
+      return isDark ? const Color(0xFFF8C4B0) : InzxColors.accentTertiary;
+    case InzxAccentColor.ocean:
       return isDark ? const Color(0xFF7BC4E8) : const Color(0xFF7BC4E8);
-    case MineAccentColor.rose:
+    case InzxAccentColor.rose:
       return isDark ? const Color(0xFFE4B5B5) : const Color(0xFFE4B5B5);
-    case MineAccentColor.amber:
+    case InzxAccentColor.amber:
       return isDark ? const Color(0xFFF8D08D) : const Color(0xFFF8D08D);
-    case MineAccentColor.mint:
+    case InzxAccentColor.mint:
       return isDark ? const Color(0xFF8FE4C8) : const Color(0xFF7DD4B8);
-    case MineAccentColor.coral:
+    case InzxAccentColor.coral:
       return isDark ? const Color(0xFFF8C4B0) : const Color(0xFFF8C4B0);
   }
 }
 
 /// Get the display name for an accent color
-String getAccentColorName(MineAccentColor accent) {
+String getAccentColorName(InzxAccentColor accent) {
   switch (accent) {
-    case MineAccentColor.red:
+    case InzxAccentColor.red:
       return 'Red';
-    case MineAccentColor.sage:
+    case InzxAccentColor.sage:
       return 'Sage Green';
-    case MineAccentColor.lavender:
+    case InzxAccentColor.lavender:
       return 'Lavender';
-    case MineAccentColor.peach:
+    case InzxAccentColor.peach:
       return 'Peach';
-    case MineAccentColor.ocean:
+    case InzxAccentColor.ocean:
       return 'Ocean Blue';
-    case MineAccentColor.rose:
+    case InzxAccentColor.rose:
       return 'Rose';
-    case MineAccentColor.amber:
+    case InzxAccentColor.amber:
       return 'Amber';
-    case MineAccentColor.mint:
+    case InzxAccentColor.mint:
       return 'Mint';
-    case MineAccentColor.coral:
+    case InzxAccentColor.coral:
       return 'Coral';
   }
 }
 
 /// Provider for the current accent color
 final accentColorProvider =
-    StateNotifierProvider<AccentColorNotifier, MineAccentColor>((ref) {
+    StateNotifierProvider<AccentColorNotifier, InzxAccentColor>((ref) {
       return AccentColorNotifier();
     });
 
 /// Notifier to manage accent color state
-class AccentColorNotifier extends StateNotifier<MineAccentColor> {
-  AccentColorNotifier() : super(MineAccentColor.red); // Default to red
+class AccentColorNotifier extends StateNotifier<InzxAccentColor> {
+  AccentColorNotifier() : super(InzxAccentColor.red); // Default to red
 
-  void setAccentColor(MineAccentColor color) {
+  void setAccentColor(InzxAccentColor color) {
     state = color;
   }
 }
 
 /// Provider for the current theme mode
 final themeModeProvider =
-    StateNotifierProvider<ThemeModeNotifier, MineThemeMode>((ref) {
+    StateNotifierProvider<ThemeModeNotifier, InzxThemeMode>((ref) {
       return ThemeModeNotifier();
     });
 
 /// Notifier to manage theme mode state
-class ThemeModeNotifier extends StateNotifier<MineThemeMode> {
+class ThemeModeNotifier extends StateNotifier<InzxThemeMode> {
   static const String themeModePrefKey = 'inzx_theme_mode';
-  static const String _legacyThemeModePrefKey = 'mine_theme_mode';
+  static const String _legacyThemeModePrefKey = 'inzx_theme_mode';
 
-  ThemeModeNotifier() : super(MineThemeMode.dark) {
+  ThemeModeNotifier() : super(InzxThemeMode.dark) {
     _loadThemeMode();
   }
 
@@ -108,16 +108,16 @@ class ThemeModeNotifier extends StateNotifier<MineThemeMode> {
           await prefs.remove(_legacyThemeModePrefKey);
         }
       }
-      if (index == null || index < 0 || index >= MineThemeMode.values.length) {
+      if (index == null || index < 0 || index >= InzxThemeMode.values.length) {
         return;
       }
-      state = MineThemeMode.values[index];
+      state = InzxThemeMode.values[index];
     } catch (_) {
       // Keep default theme if preference loading fails.
     }
   }
 
-  Future<void> _saveThemeMode(MineThemeMode mode) async {
+  Future<void> _saveThemeMode(InzxThemeMode mode) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(themeModePrefKey, mode.index);
@@ -126,34 +126,34 @@ class ThemeModeNotifier extends StateNotifier<MineThemeMode> {
     }
   }
 
-  void setThemeMode(MineThemeMode mode) {
+  void setThemeMode(InzxThemeMode mode) {
     state = mode;
     _saveThemeMode(mode);
   }
 
   void toggleTheme() {
     switch (state) {
-      case MineThemeMode.system:
-        state = MineThemeMode.light;
+      case InzxThemeMode.system:
+        state = InzxThemeMode.light;
         break;
-      case MineThemeMode.light:
-        state = MineThemeMode.dark;
+      case InzxThemeMode.light:
+        state = InzxThemeMode.dark;
         break;
-      case MineThemeMode.dark:
-        state = MineThemeMode.system;
+      case InzxThemeMode.dark:
+        state = InzxThemeMode.system;
         break;
     }
   }
 }
 
-/// Convert MineThemeMode to Flutter's ThemeMode
-ThemeMode toFlutterThemeMode(MineThemeMode mode) {
+/// Convert InzxThemeMode to Flutter's ThemeMode
+ThemeMode toFlutterThemeMode(InzxThemeMode mode) {
   switch (mode) {
-    case MineThemeMode.system:
+    case InzxThemeMode.system:
       return ThemeMode.system;
-    case MineThemeMode.light:
+    case InzxThemeMode.light:
       return ThemeMode.light;
-    case MineThemeMode.dark:
+    case InzxThemeMode.dark:
       return ThemeMode.dark;
   }
 }

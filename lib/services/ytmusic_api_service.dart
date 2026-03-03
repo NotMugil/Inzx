@@ -2870,10 +2870,7 @@ class InnerTubeService {
       if (flexColumns == null || flexColumns.isEmpty) return null;
 
       // Get video ID
-      final overlay = renderer['overlay']?['musicItemThumbnailOverlayRenderer'];
-      final playEndpoint =
-          overlay?['content']?['musicPlayButtonRenderer']?['playNavigationEndpoint'];
-      final videoId = playEndpoint?['watchEndpoint']?['videoId'] as String?;
+      final videoId = _extractVideoIdFromTrackRenderer(renderer, flexColumns);
 
       if (videoId == null) return null;
 
@@ -2893,23 +2890,10 @@ class InnerTubeService {
             flexColumns[1]['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs']
                 as List?;
         if (subtitleRuns != null && subtitleRuns.isNotEmpty) {
-          // First run is usually the artist name
-          artist = subtitleRuns[0]['text'] ?? 'Unknown Artist';
-          // Extract artistId from browse endpoint
-          final browseEndpoint =
-              subtitleRuns[0]['navigationEndpoint']?['browseEndpoint'];
-          artistId = browseEndpoint?['browseId'] as String?;
-
-          // Duration is often the last item in subtitle runs (format: "Artist • Album • 3:45")
-          // Look for duration pattern in the runs
-          for (final run in subtitleRuns.reversed) {
-            final text = run['text'] as String?;
-            if (text != null &&
-                RegExp(r'^\d{1,2}:\d{2}(:\d{2})?$').hasMatch(text.trim())) {
-              duration = _parseDuration(text.trim());
-              break;
-            }
-          }
+          final parsed = _extractArtistInfoFromSubtitleRuns(subtitleRuns);
+          artist = parsed.$1;
+          artistId = parsed.$2;
+          duration = parsed.$3;
         }
       }
 
@@ -2947,6 +2931,122 @@ class InnerTubeService {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Extract video ID from different track renderer variants.
+  ///
+  /// Some album/list responses do not populate the overlay play endpoint,
+  /// so we fall back to playlistItemData and navigation endpoints.
+  String? _extractVideoIdFromTrackRenderer(dynamic renderer, List flexColumns) {
+    final overlay = renderer['overlay']?['musicItemThumbnailOverlayRenderer'];
+    final playEndpoint =
+        overlay?['content']?['musicPlayButtonRenderer']?['playNavigationEndpoint'];
+    final overlayVideoId =
+        playEndpoint?['watchEndpoint']?['videoId'] as String?;
+    if (overlayVideoId != null && overlayVideoId.isNotEmpty) {
+      return overlayVideoId;
+    }
+
+    final playlistVideoId = renderer['playlistItemData']?['videoId'] as String?;
+    if (playlistVideoId != null && playlistVideoId.isNotEmpty) {
+      return playlistVideoId;
+    }
+
+    final navVideoId =
+        renderer['navigationEndpoint']?['watchEndpoint']?['videoId'] as String?;
+    if (navVideoId != null && navVideoId.isNotEmpty) {
+      return navVideoId;
+    }
+
+    final titleRuns =
+        flexColumns[0]['musicResponsiveListItemFlexColumnRenderer']?['text']?['runs']
+            as List?;
+    if (titleRuns != null) {
+      for (final run in titleRuns) {
+        final runVideoId =
+            run['navigationEndpoint']?['watchEndpoint']?['videoId'] as String?;
+        if (runVideoId != null && runVideoId.isNotEmpty) {
+          return runVideoId;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// Extract artist / artistId / duration from subtitle runs.
+  ///
+  /// Search subtitle runs can start with type labels (for example: "Song").
+  /// This skips those labels and returns the first meaningful metadata chunk.
+  (String, String?, Duration?) _extractArtistInfoFromSubtitleRuns(List runs) {
+    final chunks = <({String text, String? artistId})>[];
+    Duration? duration;
+
+    for (final run in runs) {
+      if (run is! Map) continue;
+
+      final rawText = run['text'] as String?;
+      if (rawText == null || rawText.trim().isEmpty) continue;
+
+      final browseEndpoint = run['navigationEndpoint']?['browseEndpoint'];
+      final runArtistId = browseEndpoint?['browseId'] as String?;
+
+      // Handle both proper bullets and mojibake bullets.
+      final normalizedText = rawText.replaceAll('â€¢', '•');
+      final parts = normalizedText
+          .split(RegExp(r'\s*[•·|]\s*'))
+          .map((p) => p.trim())
+          .where((p) => p.isNotEmpty);
+
+      for (final part in parts) {
+        if (_isDurationToken(part)) {
+          duration ??= _parseDuration(part);
+          continue;
+        }
+        chunks.add((text: part, artistId: runArtistId));
+      }
+    }
+
+    final hasMultipleChunks = chunks.length > 1;
+    for (final chunk in chunks) {
+      if (_isMetadataTypeToken(
+        chunk.text,
+        hasMultipleChunks: hasMultipleChunks,
+      )) {
+        continue;
+      }
+      if (RegExp(r'^\d{4}$').hasMatch(chunk.text)) continue;
+      return (chunk.text, chunk.artistId, duration);
+    }
+
+    if (chunks.isNotEmpty) {
+      return (chunks.first.text, chunks.first.artistId, duration);
+    }
+
+    return ('Unknown Artist', null, duration);
+  }
+
+  bool _isDurationToken(String value) {
+    final text = value.trim();
+    return RegExp(r'^\d{1,2}:\d{2}(:\d{2})?$').hasMatch(text);
+  }
+
+  bool _isMetadataTypeToken(String value, {required bool hasMultipleChunks}) {
+    if (!hasMultipleChunks) return false;
+
+    final text = value.trim().toLowerCase();
+    const typeTokens = {
+      'song',
+      'songs',
+      'video',
+      'videos',
+      'album',
+      'single',
+      'ep',
+      'playlist',
+      'artist',
+    };
+    return typeTokens.contains(text);
   }
 
   List<Album> _parseLibraryAlbums(Map<String, dynamic> response) {
@@ -3460,6 +3560,9 @@ class InnerTubeService {
       // Get subtitle (artist/type info)
       final subtitleRuns = cardShelf['subtitle']?['runs'] as List?;
       final subtitle = subtitleRuns?.map((r) => r['text']).join() ?? '';
+      final subtitleArtist = _extractArtistInfoFromSubtitleRuns(
+        subtitleRuns ?? <dynamic>[],
+      ).$1;
 
       // Get navigation endpoint to determine type
       final browseEndpoint =
@@ -3482,7 +3585,9 @@ class InnerTubeService {
               Album(
                 id: browseId,
                 title: title,
-                artist: subtitle.replaceAll(RegExp(r'\s*•.*'), ''),
+                artist: subtitleArtist == 'Unknown Artist'
+                    ? subtitle
+                    : subtitleArtist,
                 thumbnailUrl: thumbnailUrl,
               ),
             );
@@ -3510,7 +3615,9 @@ class InnerTubeService {
             Track(
               id: videoId,
               title: title,
-              artist: subtitle.replaceAll(RegExp(r'\s*•.*'), ''),
+              artist: subtitleArtist == 'Unknown Artist'
+                  ? subtitle
+                  : subtitleArtist,
               duration: Duration.zero,
               thumbnailUrl: thumbnailUrl,
             ),
